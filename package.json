@@ -1,5 +1,5 @@
 {
-  "name": "aads",
+  "name": "aads-cli",
   "version": "1.0.0",
   "private": false,
   "type": "module",
@@ -19,7 +19,8 @@
     "url": "https://github.com/yuuki-courage/aads.git"
   },
   "bin": {
-    "aads": "./dist/cli.js"
+    "aads": "./dist/cli.js",
+    "aads-cli": "./dist/cli.js"
   },
   "files": [
     "dist/",

@@ -20,7 +20,7 @@ Amazon Ads のバルクシートエクスポート（Excel/CSV）を読み込み
 ## インストール
 
 ```bash
-npm install -g aads
+npm install -g aads-cli
 ```
 
 インストールせずに使う場合:

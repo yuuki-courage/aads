@@ -20,7 +20,7 @@ Reads Amazon Ads bulk sheet exports (Excel/CSV) and generates actionable optimiz
 ## Installation
 
 ```bash
-npm install -g aads
+npm install -g aads-cli
 ```
 
 Or use without installing:
