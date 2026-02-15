@@ -128,7 +128,7 @@ aads seo-report --input <pattern> --ranking-db <path> [--output <file>] [--forma
 
 ## SEO連携
 
-`cpc-report` と `seo-report` コマンドは、SQLiteデータベースに格納されたSEOランキングデータと連携できます（例: [A_rank](https://github.com/yuuki-courage/A_rank)）。
+`cpc-report` と `seo-report` コマンドは、SQLiteデータベースに格納されたSEOランキングデータと連携できます。
 
 広告キーワードのオーガニック順位が強い場合（1-4位）、推奨CPC入札額を自動的に削減します:
 
@@ -139,6 +139,18 @@ aads seo-report --input <pattern> --ranking-db <path> [--output <file>] [--forma
 | 3位 | 0.70 | -30% |
 | 4位 | 0.80 | -20% |
 | 5位以降 | 1.00 | 変更なし |
+
+### SEOデータの準備
+
+動作確認用のサンプルデータベースが同梱されています:
+
+```bash
+aads seo-report --input bulk-sheet.xlsx --ranking-db data/sample-ranking.db
+```
+
+独自のデータを使用する場合は、[データベーススキーマ](docs/seo-database-schema.md)に従ってSQLiteデータベースを作成してください。スクレイパー、サードパーティAPI、手動入力など、任意のソースからデータを投入できます。
+
+> **今後の予定**: Amazonの検索ランキングデータを自動収集するChrome拡張機能を、別のOSSプロジェクトとして公開予定です。
 
 ## キャンペーンレイヤーポリシー
 

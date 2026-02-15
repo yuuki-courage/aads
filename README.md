@@ -128,7 +128,7 @@ See [`.env.example`](.env.example) for a complete template.
 
 ## SEO Integration
 
-The `cpc-report` and `seo-report` commands can integrate with SEO ranking data stored in a SQLite database (e.g., from [A_rank](https://github.com/yuuki-courage/A_rank)).
+The `cpc-report` and `seo-report` commands can integrate with SEO ranking data stored in a SQLite database.
 
 When an ad keyword has strong organic ranking (positions 1-4), the tool automatically reduces the recommended CPC bid:
 
@@ -139,6 +139,18 @@ When an ad keyword has strong organic ranking (positions 1-4), the tool automati
 | #3 | 0.70 | -30% |
 | #4 | 0.80 | -20% |
 | #5+ | 1.00 | No change |
+
+### Getting Started with SEO Data
+
+A sample database with dummy data is included for testing:
+
+```bash
+aads seo-report --input bulk-sheet.xlsx --ranking-db data/sample-ranking.db
+```
+
+To use your own data, create a SQLite database matching the [database schema](docs/seo-database-schema.md). You can populate it from any source — a custom scraper, third-party API, or manual entry.
+
+> **Coming soon**: A companion Chrome extension for automatically collecting Amazon search ranking data will be released as a separate open-source project.
 
 ## Campaign Layer Policy
 
