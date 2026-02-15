@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+
+# Generated reports
+output/
+
+# Input data (bulk sheets, reports, CSVs)
+data/input/
+*.csv
+
+# Environment
+.env
+.env.local
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

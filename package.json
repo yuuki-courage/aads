@@ -1,0 +1,64 @@
+{
+  "name": "aads",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "CLI tool for analyzing Amazon Ads Sponsored Products campaign performance",
+  "keywords": [
+    "amazon-ads",
+    "ppc",
+    "sponsored-products",
+    "cli",
+    "cpc-optimization",
+    "acos"
+  ],
+  "license": "MIT",
+  "author": "yuuki-courage",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuuki-courage/aads.git"
+  },
+  "bin": {
+    "aads": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "data/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx src/cli.ts",
+    "lint": "eslint src/",
+    "format:check": "prettier --check 'src/**/*.ts'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "commander": "^14.0.1",
+    "dotenv": "^17.2.1",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "prettier": "^3.5.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}

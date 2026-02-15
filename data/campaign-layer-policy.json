@@ -1,0 +1,68 @@
+{
+  "version": "1.0",
+  "layers": {
+    "L0": {
+      "name": "DEF",
+      "nameJa": "防衛",
+      "purpose": "指名流入の取りこぼし防止",
+      "alwaysOn": true,
+      "budgetSharePct": 0.05,
+      "campaignPrefix": "SP_DEF_",
+      "targetAcos": 0.10
+    },
+    "L1": {
+      "name": "CORE",
+      "nameJa": "恒常主力",
+      "purpose": "安定売上・事業の軸",
+      "alwaysOn": true,
+      "budgetSharePct": 0.55,
+      "campaignPrefix": "SP_CORE_",
+      "targetAcos": 0.15
+    },
+    "L2": {
+      "name": "EXP",
+      "nameJa": "探索",
+      "purpose": "育成・昇格候補の蓄積",
+      "alwaysOn": true,
+      "budgetSharePct": 0.25,
+      "campaignPrefix": "SP_EXP_",
+      "targetAcos": 0.25
+    },
+    "L3": {
+      "name": "EVT",
+      "nameJa": "セール専用",
+      "purpose": "セール時の最大化",
+      "alwaysOn": false,
+      "budgetSharePct": 0.10,
+      "campaignPrefix": "SP_EVT_",
+      "targetAcos": 0.20
+    },
+    "L4": {
+      "name": "AUTO",
+      "nameJa": "オート",
+      "purpose": "新規発見＋既存性能維持",
+      "alwaysOn": true,
+      "budgetSharePct": 0.05,
+      "campaignPrefix": "SP_AUTO_",
+      "targetAcos": 0.30
+    }
+  },
+  "namingPatterns": [
+    { "pattern": "^SP_DEF_", "layer": "L0" },
+    { "pattern": "^SP_CORE_", "layer": "L1" },
+    { "pattern": "^SP_EXP_", "layer": "L2" },
+    { "pattern": "^SP_EVT_", "layer": "L3" },
+    { "pattern": "^SP_AUTO_", "layer": "L4" }
+  ],
+  "fallbackClassification": {
+    "auto": "L4",
+    "manual-exact": "L1",
+    "manual-phrase": "L2",
+    "manual-broad": "L2"
+  },
+  "promotionRules": [
+    { "from": "L4", "to": "L2", "description": "Auto→EXP: clicks>=5 AND orders>=1" },
+    { "from": "L2", "to": "L1", "description": "EXP→CORE: (CVR>=20% OR orders>=2) AND ACOS<=15%" },
+    { "from": "L2", "to": "L3", "description": "EXP→EVT: セール期間中にCVR改善" }
+  ]
+}
