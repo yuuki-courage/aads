@@ -33,6 +33,7 @@ const makeRecord = (overrides: Partial<NormalizedRecord> = {}): NormalizedRecord
   startDate: "",
   endDate: "",
   biddingStrategy: "",
+  placement: "",
   sourceFile: "test.xlsx",
   ...overrides,
 });

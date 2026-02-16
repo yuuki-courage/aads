@@ -7,9 +7,12 @@ import { loadCampaignLayerPolicy } from "./config/campaign-layer-policy.js";
 import { loadOptimisationConfig } from "./config/optimisation-config.js";
 import { Logger } from "./utils/logger.js";
 import { runAnalyzePipeline } from "./pipeline/analyze-pipeline.js";
+import { runGeneratePipeline } from "./pipeline/generate-pipeline.js";
 import { writeXlsx } from "./io/excel-writer.js";
+import { bulkRowToArray } from "./generators/row-builders.js";
+import { BULK_SCHEMA_HEADER_V210 } from "./config/constants.js";
 import { timestampForFilename } from "./utils/date-utils.js";
-import type { AnalyzePipelineResult, OutputFormat } from "./pipeline/types.js";
+import type { AnalyzePipelineResult, OutputFormat, StrategyData } from "./pipeline/types.js";
 import type { CampaignLayerId } from "./config/campaign-layer-policy.js";
 
 const logger = new Logger(process.env.LOG_LEVEL === "debug" ? "debug" : "info");
@@ -97,7 +100,7 @@ const program = new Command();
 program
   .name("aads")
   .description("CLI tool for analyzing Amazon Ads Sponsored Products campaign performance")
-  .version("1.0.0");
+  .version("1.1.0");
 
 program
   .command("analyze")
@@ -391,6 +394,44 @@ program
 
     console.log(`\nTotal CPC recommendations: ${seoItems.length}`);
     console.log(`SEO-adjusted: ${seoAdjusted.length}`);
+  });
+
+program
+  .command("generate")
+  .description("Generate Amazon Ads bulk sheet from analysis results")
+  .requiredOption("--input <pattern>", "Input Excel/CSV path or wildcard pattern")
+  .requiredOption("--output <file>", "Output xlsx path")
+  .option("--blocks <list>", "Comma-separated block numbers to run (1,2,3,3.5,4,5)", "")
+  .action(async (options: { input: string; output: string; blocks: string }) => {
+    const config = loadOptimisationConfig();
+    const analyzed = await runAnalyzePipeline(options.input, config);
+
+    const blocks = options.blocks
+      ? options.blocks
+          .split(",")
+          .map((b) => Number.parseFloat(b.trim()))
+          .filter((n) => !Number.isNaN(n))
+      : [];
+
+    const strategy: StrategyData = { source: "none" };
+
+    const result = runGeneratePipeline({
+      analyzeResult: analyzed,
+      config,
+      strategy,
+      blocks,
+    });
+
+    const header = [...BULK_SCHEMA_HEADER_V210];
+    const rows = result.rows.map((r) => bulkRowToArray(r));
+
+    await writeXlsx(options.output, [{ name: "Bulk_Sheet", header, rows }]);
+
+    logger.info("Bulk sheet generated", {
+      output: options.output,
+      ...result.summary.blockCounts,
+      totalRows: result.summary.totalRows,
+    });
   });
 
 program.parseAsync(process.argv).catch((error: unknown) => {

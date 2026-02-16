@@ -87,6 +87,7 @@ const normalizeRecord = (row: DataRow, source: BulkInputData): NormalizedRecord 
     startDate: "",
     endDate: "",
     biddingStrategy: "",
+    placement: asText(map.placement),
     sourceFile: source.sourceFile,
   };
 };
