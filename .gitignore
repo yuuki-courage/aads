@@ -27,3 +27,13 @@ data/input/
 # OS
 .DS_Store
 Thumbs.db
+
+# Antigravity / Gemini
+.agent/
+.gemini/
+ai_artifacts/
+.agent-state/
+.agent-lock
+
+# Claude Code
+.claude/
