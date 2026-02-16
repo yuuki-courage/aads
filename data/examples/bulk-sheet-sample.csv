@@ -1,0 +1,6 @@
+Campaign ID,Campaign Name,Ad Group ID,Ad Group Name,Keyword ID,Keyword Text,Match Type,Targeting Type,Clicks,Impressions,Spend,Sales,Orders,Bid,State
+100001,Summer_Sale_SP,200001,AdGroup_Shoes,300001,running shoes,exact,keyword,150,5000,4500,18000,12,120,enabled
+100001,Summer_Sale_SP,200001,AdGroup_Shoes,300002,best running shoes,phrase,keyword,80,3200,2400,9600,6,100,enabled
+100001,Summer_Sale_SP,200002,AdGroup_Apparel,300003,sports wear,broad,keyword,45,2800,1350,4500,3,90,paused
+100002,Winter_Campaign_SD,200003,AdGroup_Jackets,300004,winter jacket,exact,keyword,200,6100,6000,30000,15,150,enabled
+100002,Winter_Campaign_SD,200003,AdGroup_Jackets,300005,warm coat,phrase,keyword,30,1500,900,2700,2,80,paused
