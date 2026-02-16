@@ -16,6 +16,7 @@ Reads Amazon Ads bulk sheet exports (Excel/CSV) and generates actionable optimiz
 | `cpc-report` | CPC bid optimization report with optional SEO ranking integration |
 | `promotion-report` | Auto-to-Manual promotion candidates + negative keyword suggestions |
 | `seo-report` | SEO organic ranking vs ad keyword integrated report |
+| `generate` | Generate Amazon Ads bulk sheet from analysis results |
 
 ## Installation
 
@@ -46,6 +47,12 @@ aads promotion-report --input "bulk-*.xlsx" --output promotion.xlsx
 
 # Generate SEO-integrated report
 aads seo-report --input "bulk-*.xlsx" --ranking-db ranking.db
+
+# Generate bulk sheet for uploading to Amazon Ads
+aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx
+
+# Generate only specific blocks (e.g., CPC + Negative keywords)
+aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx --blocks 2,4
 ```
 
 ## Commands
@@ -107,6 +114,31 @@ aads seo-report --input <pattern> --ranking-db <path> [--output <file>] [--forma
 | `--ranking-db <path>` | A_rank SQLite DB path (required) |
 | `--output <file>` | Output file path |
 | `--format <type>` | `console` \| `json` \| `xlsx` (default: `console`) |
+
+### `generate`
+
+Generates an Amazon Ads bulk sheet (V2.10 format, 27 columns) from analysis results. Runs the full analyze pipeline, then applies selected optimization blocks to produce rows ready for upload.
+
+```bash
+aads generate --input <pattern> --output <file> [--blocks <list>]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--input <pattern>` | Input Excel/CSV path or wildcard pattern (required) |
+| `--output <file>` | Output xlsx path (required) |
+| `--blocks <list>` | Comma-separated block numbers to run (default: all) |
+
+**Available Blocks:**
+
+| Block | Name | Description |
+|-------|------|-------------|
+| 1 | Budget | Campaign daily budget adjustments |
+| 2 | CPC | Keyword bid updates based on ACOS optimization |
+| 3 | Promotion | Auto-to-Manual keyword promotion (create in manual campaign) |
+| 3.5 | Negative Sync | Add negative keywords in auto campaign for promoted terms |
+| 4 | Negative | Negative keywords for wasteful search terms |
+| 5 | Placement | Placement bid modifier adjustments (Top of Search / Product Pages) |
 
 ## Configuration
 

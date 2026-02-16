@@ -23,6 +23,7 @@ Amazonセラーセントラルからダウンロードした「バルクシー�
 | `cpc-report` | CPC入札最適化レポート（SEOランキング連携対応） |
 | `promotion-report` | Auto→Manual昇格候補 + ネガティブキーワード提案 |
 | `seo-report` | SEOオーガニック順位 × 広告キーワード統合レポート |
+| `generate` | 分析結果からAmazon Adsバルクシートを生成 |
 
 ## インストール
 
@@ -53,6 +54,12 @@ aads promotion-report --input "bulk-*.xlsx" --output promotion.xlsx
 
 # SEO統合レポートを生成
 aads seo-report --input "bulk-*.xlsx" --ranking-db ranking.db
+
+# 分析結果からバルクシートを生成（Amazon Adsにアップロード可能）
+aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx
+
+# 特定のブロックのみ実行（例: CPC + ネガティブキーワード）
+aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx --blocks 2,4
 ```
 
 ## コマンド
@@ -114,6 +121,31 @@ aads seo-report --input <pattern> --ranking-db <path> [--output <file>] [--forma
 | `--ranking-db <path>` | A_rank SQLite DBパス（必須） |
 | `--output <file>` | 出力ファイルパス |
 | `--format <type>` | `console` \| `json` \| `xlsx`（デフォルト: `console`） |
+
+### `generate`
+
+分析結果からAmazon Adsバルクシート（V2.10形式、27カラム）を生成します。分析パイプラインを実行した後、選択された最適化ブロックを適用してアップロード可能な行を出力します。
+
+```bash
+aads generate --input <pattern> --output <file> [--blocks <list>]
+```
+
+| オプション | 説明 |
+|-----------|------|
+| `--input <pattern>` | 入力Excel/CSVパスまたはワイルドカードパターン（必須） |
+| `--output <file>` | 出力xlsxパス（必須） |
+| `--blocks <list>` | 実行するブロック番号のカンマ区切り（デフォルト: 全ブロック） |
+
+**利用可能なブロック:**
+
+| ブロック | 名称 | 説明 |
+|---------|------|------|
+| 1 | Budget | キャンペーン日次予算の調整 |
+| 2 | CPC | ACOS最適化に基づくキーワード入札更新 |
+| 3 | Promotion | Auto→Manualキーワード昇格（手動キャンペーンに作成） |
+| 3.5 | Negative Sync | 昇格済みキーワードをAutoキャンペーンでネガティブ登録 |
+| 4 | Negative | 無駄な検索語のネガティブキーワード追加 |
+| 5 | Placement | プレースメント入札修飾子の調整（検索結果上部 / 商品ページ） |
 
 ## 設定
 
