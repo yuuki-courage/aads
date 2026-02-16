@@ -1,1 +1,83 @@
-﻿System.Xml.XmlDocument
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <style>
+      .box { fill: #ffffff; stroke: #2c3e50; stroke-width: 2; }
+      .input-box { fill: #e8f4f8; stroke: #3498db; stroke-width: 2; }
+      .process-box { fill: #fff5e6; stroke: #f39c12; stroke-width: 2; }
+      .output-box { fill: #e8f8e8; stroke: #27ae60; stroke-width: 2; }
+      .text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; fill: #2c3e50; }
+      .title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #2c3e50; }
+      .small-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; fill: #555; }
+      .arrow { fill: none; stroke: #7f8c8d; stroke-width: 2; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7f8c8d" />
+    </marker>
+  </defs>
+
+  <!-- Input: Bulk Sheet -->
+  <rect x="50" y="50" width="180" height="80" rx="8" class="input-box"/>
+  <text x="140" y="75" text-anchor="middle" class="title">バルクシート</text>
+  <text x="140" y="100" text-anchor="middle" class="small-text">Amazon Ads</text>
+  <text x="140" y="118" text-anchor="middle" class="small-text">スポンサープロダクト広告</text>
+
+  <!-- Arrow 1 -->
+  <path d="M 230 90 L 290 90" class="arrow"/>
+
+  <!-- Process: AADS CLI -->
+  <rect x="290" y="50" width="180" height="80" rx="8" class="process-box"/>
+  <text x="380" y="75" text-anchor="middle" class="title">AADS CLI</text>
+  <text x="380" y="100" text-anchor="middle" class="small-text">パフォーマンス解析</text>
+  <text x="380" y="118" text-anchor="middle" class="small-text">KPI集計・最適化</text>
+
+  <!-- Arrow 2 -->
+  <path d="M 470 90 L 530 90" class="arrow"/>
+
+  <!-- Output: Reports -->
+  <rect x="530" y="50" width="220" height="80" rx="8" class="output-box"/>
+  <text x="640" y="75" text-anchor="middle" class="title">最適化レポート</text>
+  <text x="640" y="100" text-anchor="middle" class="small-text">売上アップ・コスト削減の</text>
+  <text x="640" y="118" text-anchor="middle" class="small-text">具体的な改善案</text>
+
+  <!-- Report Details -->
+  <g>
+    <!-- CPC Report -->
+    <rect x="530" y="180" width="220" height="60" rx="6" class="box"/>
+    <text x="640" y="202" text-anchor="middle" class="text">📊 CPC入札最適化レポート</text>
+    <text x="640" y="222" text-anchor="middle" class="small-text">目標ACOSに基づく推奨入札額</text>
+
+    <!-- Promotion Report -->
+    <rect x="530" y="260" width="220" height="60" rx="6" class="box"/>
+    <text x="640" y="282" text-anchor="middle" class="text">🚀 Auto→Manual昇格候補</text>
+    <text x="640" y="302" text-anchor="middle" class="small-text">成果の出ているキーワードを特定</text>
+
+    <!-- Negative KW -->
+    <rect x="530" y="340" width="220" height="60" rx="6" class="box"/>
+    <text x="640" y="362" text-anchor="middle" class="text">🚫 ネガティブKW提案</text>
+    <text x="640" y="382" text-anchor="middle" class="small-text">無駄な広告費を削減</text>
+
+    <!-- SEO Report -->
+    <rect x="530" y="420" width="220" height="60" rx="6" class="box"/>
+    <text x="640" y="442" text-anchor="middle" class="text">🔍 SEOランキング連携</text>
+    <text x="640" y="462" text-anchor="middle" class="small-text">オーガニック順位に基づく入札調整</text>
+  </g>
+
+  <!-- Arrows to reports -->
+  <path d="M 640 130 L 640 180" class="arrow"/>
+
+  <!-- Input Details -->
+  <g>
+    <text x="50" y="160" class="small-text">📥 入力データ：</text>
+    <text x="50" y="180" class="small-text">• Excel/CSV バルクシート</text>
+    <text x="50" y="200" class="small-text">• キャンペーン・広告グループ</text>
+    <text x="50" y="220" class="small-text">• クリック・売上・費用データ</text>
+  </g>
+
+  <!-- Process Details -->
+  <g>
+    <text x="290" y="160" class="small-text">⚙️ 分析機能：</text>
+    <text x="290" y="180" class="small-text">• KPI集計（CTR/CVR/ACOS/ROAS）</text>
+    <text x="290" y="200" class="small-text">• キャンペーン構造分析</text>
+    <text x="290" y="220" class="small-text">• SKU分類・異常検知</text>
+  </g>
+</svg>
