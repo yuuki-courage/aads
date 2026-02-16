@@ -21,6 +21,7 @@ export const HEADER_CANDIDATES = {
   state: ["State", "state", "キャンペーンのステータス", "status"],
   targetingType: ["Targeting Type", "ターゲティングの種類", "Campaign Targeting Type", "targeting_type"],
   portfolioId: ["Portfolio ID", "ポートフォリオID", "portfolio_id"],
+  placement: ["Placement", "Placement Type", "掲載枠", "placement"],
 } as const;
 
 export const STATE_MAPPING_JP_TO_EN: Record<string, "enabled" | "paused" | "archived"> = {
@@ -54,6 +55,18 @@ export const OPTIMIZATION_DEFAULTS = {
     factors: { 1: 0.5, 2: 0.6, 3: 0.7, 4: 0.8 } as Record<number, number>,
   },
 } as const;
+
+export const BULK_SCHEMA_HEADER_V210 = [
+  "Product", "Entity", "Operation",
+  "Campaign Name", "Campaign ID", "Portfolio ID",
+  "Ad Group Name", "Ad Group ID", "Ad Group Default Bid",
+  "SKU / ASIN", "Keyword Text", "Product Targeting Expression",
+  "Match Type", "Campaign Targeting Type", "State",
+  "Daily Budget", "Bid", "Start Date", "End Date",
+  "Bidding Strategy", "Placement (Top of Search)", "Percentage",
+  "Placement (Product Pages)", "Targeting Type",
+  "Keyword ID", "Product Targeting ID", "Campaign Status",
+] as const;
 
 export const SKU_LABEL_RULES = {
   focus: { maxAcos: 0.15, minCvr: 0.05, bidAdjust: 1.2, budgetAdjust: 1.15 },

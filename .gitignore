@@ -9,12 +9,17 @@ dist/
 output/
 
 # Input data (bulk sheets, reports, CSVs)
-data/input/
+data/input/*
+!data/input/README.md
 data/output/
 *.csv
 
 # Allow example CSV files
 !data/examples/*.csv
+
+# Account strategy data (contains sensitive business info)
+accounts/*
+!accounts/_template/
 
 # Environment
 .env
