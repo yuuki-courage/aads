@@ -3,10 +3,7 @@ import { lookupCampaignId, lookupAdGroupId } from "../core/id-spine.js";
 import type { IdSpine } from "../core/id-spine.js";
 import type { BulkOutputRow, PromotionCandidate } from "../pipeline/types.js";
 
-export const generatePromotionRows = (
-  candidates: PromotionCandidate[],
-  spine: IdSpine,
-): BulkOutputRow[] => {
+export const generatePromotionRows = (candidates: PromotionCandidate[], spine: IdSpine): BulkOutputRow[] => {
   const rows: BulkOutputRow[] = [];
 
   for (const c of candidates) {

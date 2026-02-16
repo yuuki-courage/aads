@@ -1,10 +1,7 @@
 import { buildBulkRow } from "./row-builders.js";
 import type { BulkOutputRow, StrategyData, NormalizedRecord } from "../pipeline/types.js";
 
-export const generateBudgetRows = (
-  records: NormalizedRecord[],
-  strategy: StrategyData,
-): BulkOutputRow[] => {
+export const generateBudgetRows = (records: NormalizedRecord[], strategy: StrategyData): BulkOutputRow[] => {
   if (!strategy.budgetByCampaign || Object.keys(strategy.budgetByCampaign).length === 0) {
     return [];
   }

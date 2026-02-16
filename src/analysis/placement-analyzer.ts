@@ -31,10 +31,7 @@ const normalizePlacementType = (raw: string): string => {
   return raw;
 };
 
-export const analyzePlacement = (
-  records: NormalizedRecord[],
-  targetAcos: number,
-): PlacementRecommendation[] => {
+export const analyzePlacement = (records: NormalizedRecord[], targetAcos: number): PlacementRecommendation[] => {
   // Group records by campaign + placement
   const campaignPlacements = new Map<string, Map<string, PlacementStats>>();
 

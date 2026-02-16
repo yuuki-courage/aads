@@ -407,7 +407,10 @@ program
     const analyzed = await runAnalyzePipeline(options.input, config);
 
     const blocks = options.blocks
-      ? options.blocks.split(",").map((b) => Number.parseFloat(b.trim())).filter((n) => !Number.isNaN(n))
+      ? options.blocks
+          .split(",")
+          .map((b) => Number.parseFloat(b.trim()))
+          .filter((n) => !Number.isNaN(n))
       : [];
 
     const strategy: StrategyData = { source: "none" };
