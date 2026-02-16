@@ -34,3 +34,6 @@ Thumbs.db
 ai_artifacts/
 .agent-state/
 .agent-lock
+
+# Claude Code
+.claude/
