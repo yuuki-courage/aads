@@ -10,7 +10,11 @@ output/
 
 # Input data (bulk sheets, reports, CSVs)
 data/input/
+data/output/
 *.csv
+
+# Allow example CSV files
+!data/examples/*.csv
 
 # Environment
 .env
