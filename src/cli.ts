@@ -126,7 +126,7 @@ program
     );
 
     logger.info("Analyze completed", {
-      files: result.input.length,
+      files: new Set(result.input.map((i) => i.sourceFile.replace(/#.*$/, ""))).size,
       rows: result.records.length,
       period: result.dateRange
         ? `${result.dateRange.startDate} ~ ${result.dateRange.endDate} (${result.dateRange.days}d)`
