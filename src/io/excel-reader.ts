@@ -3,6 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import type { BulkInputData, DataRow, RowValue } from "../pipeline/types.js";
 
+const SEARCH_TERM_REPORT_SHEETS = ["SP検索ワードレポート", "SB検索ワードレポート"];
+
+export interface ReadBulkOptions {
+  sheetsFilter?: "search-term-only" | "all";
+}
+
 const wildcardToRegExp = (pattern: string): RegExp => {
   const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
   const regex = escaped.replace(/\*/g, ".*").replace(/\?/g, ".");
@@ -64,7 +70,11 @@ const readWorksheetAsRows = (worksheet: ExcelJS.Worksheet): { headers: string[];
   return { headers, rows: dataRows };
 };
 
-export const readBulkExcelFiles = async (inputPattern: string): Promise<BulkInputData[]> => {
+export const readBulkExcelFiles = async (
+  inputPattern: string,
+  options: ReadBulkOptions = {},
+): Promise<BulkInputData[]> => {
+  const { sheetsFilter = "search-term-only" } = options;
   const files = resolveInputFiles(inputPattern);
   if (files.length === 0) {
     throw new Error(`No input files matched: ${inputPattern}`);
@@ -77,6 +87,9 @@ export const readBulkExcelFiles = async (inputPattern: string): Promise<BulkInpu
     await workbook.xlsx.readFile(file);
 
     for (const worksheet of workbook.worksheets) {
+      if (sheetsFilter === "search-term-only" && !SEARCH_TERM_REPORT_SHEETS.includes(worksheet.name)) {
+        continue;
+      }
       const parsed = readWorksheetAsRows(worksheet);
       if (parsed.headers.length === 0 || parsed.rows.length === 0) {
         continue;
