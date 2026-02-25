@@ -24,6 +24,8 @@ Amazonセラーセントラルからダウンロードした「バルクシー�
 | `promotion-report` | Auto→Manual昇格候補 + ネガティブキーワード提案 |
 | `seo-report` | SEOオーガニック順位 × 広告キーワード統合レポート |
 | `generate` | 分析結果からAmazon Adsバルクシートを生成 |
+| `apply-actions` | JSONコンフィグから施策アクション（ネガティブKW、キーワード追加、プレースメント調整）を適用 |
+| `create-campaign` | テンプレートコンフィグからキャンペーン構造バルクシートを生成 |
 
 ## インストール
 
@@ -60,6 +62,12 @@ aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx
 
 # 特定のブロックのみ実行（例: CPC + ネガティブキーワード）
 aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx --blocks 2,4
+
+# JSONコンフィグから施策アクションを適用
+aads apply-actions --config actions.json --output actions.xlsx
+
+# テンプレートからキャンペーン構造を新規作成
+aads create-campaign --config campaign.json --output campaign.xlsx
 ```
 
 ## コマンド
@@ -146,6 +154,60 @@ aads generate --input <pattern> --output <file> [--blocks <list>]
 | 3.5 | Negative Sync | 昇格済みキーワードをAutoキャンペーンでネガティブ登録 |
 | 4 | Negative | 無駄な検索語のネガティブキーワード追加 |
 | 5 | Placement | プレースメント入札修飾子の調整（検索結果上部 / 商品ページ） |
+
+### `apply-actions`
+
+JSONコンフィグから施策アクションをバルクシートに変換します。ネガティブキーワード、キーワード追加、商品ターゲティング、プレースメント調整を一括で処理できます。
+
+```bash
+aads apply-actions --config <file> --output <file>
+```
+
+| オプション | 説明 |
+|-----------|------|
+| `--config <file>` | アクションアイテムのJSONコンフィグパス（必須） |
+| `--output <file>` | 出力xlsxパス（必須） |
+
+**対応するアクションタイプ:**
+
+| タイプ | 説明 |
+|--------|------|
+| `negative_keyword` | ネガティブキーワード追加（広告グループ or キャンペーンレベル） |
+| `negative_product_targeting` | ネガティブ商品ターゲティング（ASIN） |
+| `keyword` | キーワード追加（入札額付き） |
+| `placement` | プレースメント入札率の調整 |
+
+コンフィグ形式は [`data/samples/action-items-sample.json`](data/samples/action-items-sample.json) を参照してください。
+
+### `create-campaign`
+
+テンプレートコンフィグからキャンペーン構造を生成します。新規キャンペーン作成と既存キャンペーンの更新に対応しています。
+
+```bash
+aads create-campaign --config <file> --output <file> [--mode <create|update>] [--input <file>]
+```
+
+| オプション | 説明 |
+|-----------|------|
+| `--config <file>` | キャンペーンテンプレートJSONコンフィグパス（必須） |
+| `--output <file>` | 出力xlsxパス（必須） |
+| `--mode <mode>` | `create`（デフォルト）または `update` |
+| `--input <file>` | updateモード時のID解決用SCバルクシート |
+
+**キャンペーンタイプ:** `auto`, `phrase`, `broad`, `asin`, `manual`
+
+キャンペーン名・広告グループ名はコンフィグ内の `naming` でカスタマイズ可能です:
+
+```json
+{
+  "naming": {
+    "campaignTemplate": "{brand}_{typeLabel}_{suffix}",
+    "adGroupTemplate": "{code}_{descriptor}"
+  }
+}
+```
+
+コンフィグ形式は [`data/samples/campaign-template-sample.json`](data/samples/campaign-template-sample.json) を参照してください。
 
 ## 設定
 
