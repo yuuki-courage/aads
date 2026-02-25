@@ -267,7 +267,7 @@ describe("block4-negative", () => {
 // ── Block 5: Placement ──
 
 describe("block5-placement", () => {
-  it("generates placement bid modifier rows", () => {
+  it("generates Campaign entity with placement percentage for Top of Search", () => {
     const recs: PlacementRecommendation[] = [
       {
         campaignId: "C1",
@@ -281,12 +281,14 @@ describe("block5-placement", () => {
     const rows = generatePlacementRows(recs);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].Entity).toBe("Bidding Adjustment");
-    expect(rows[0]["Placement (Top of Search)"]).toBe("enabled");
-    expect(rows[0].Percentage).toBe(50);
+    expect(rows[0].Entity).toBe("Campaign");
+    expect(rows[0].Operation).toBe("update");
+    expect(rows[0].State).toBe("");
+    expect(rows[0]["Placement (Top of Search)"]).toBe("50");
+    expect(rows[0].Percentage).toBe("");
   });
 
-  it("generates Product Pages placement rows", () => {
+  it("generates Campaign entity with placement percentage for Product Pages", () => {
     const recs: PlacementRecommendation[] = [
       {
         campaignId: "C1",
@@ -300,8 +302,9 @@ describe("block5-placement", () => {
     const rows = generatePlacementRows(recs);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]["Placement (Product Pages)"]).toBe("enabled");
-    expect(rows[0].Percentage).toBe(30);
+    expect(rows[0].Entity).toBe("Campaign");
+    expect(rows[0]["Placement (Product Pages)"]).toBe("30");
+    expect(rows[0].Percentage).toBe("");
   });
 
   it("skips recommendations with 0 percentage", () => {
