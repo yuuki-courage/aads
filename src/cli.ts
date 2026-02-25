@@ -10,9 +10,13 @@ import { runAnalyzePipeline } from "./pipeline/analyze-pipeline.js";
 import { runGeneratePipeline } from "./pipeline/generate-pipeline.js";
 import { writeXlsx } from "./io/excel-writer.js";
 import { bulkRowToArray } from "./generators/row-builders.js";
-import { BULK_SCHEMA_HEADER_V210 } from "./config/constants.js";
+import { BULK_SCHEMA_HEADER_V210, B500_CAMPAIGN_HEADER } from "./config/constants.js";
 import { timestampForFilename } from "./utils/date-utils.js";
-import type { AnalyzePipelineResult, OutputFormat, StrategyData } from "./pipeline/types.js";
+import { generateActionItemRows } from "./generators/apply-actions.js";
+import { generateCampaignTemplate } from "./generators/campaign-template.js";
+import { validateCampaignTemplateConfig } from "./config/campaign-template-defaults.js";
+import type { AnalyzePipelineResult, OutputFormat, StrategyData, ActionItemsConfig } from "./pipeline/types.js";
+import type { CampaignTemplateConfig } from "./config/campaign-template-defaults.js";
 import type { CampaignLayerId } from "./config/campaign-layer-policy.js";
 
 const logger = new Logger(process.env.LOG_LEVEL === "debug" ? "debug" : "info");
@@ -100,7 +104,7 @@ const program = new Command();
 program
   .name("aads")
   .description("CLI tool for analyzing Amazon Ads Sponsored Products campaign performance")
-  .version("1.1.0");
+  .version("1.2.0");
 
 program
   .command("analyze")
@@ -433,6 +437,96 @@ program
       totalRows: result.summary.totalRows,
     });
   });
+
+program
+  .command("apply-actions")
+  .description("Apply action items to generate a bulk sheet for batch operations")
+  .requiredOption("--config <file>", "Action items config JSON path")
+  .requiredOption("--output <file>", "Output xlsx path")
+  .action(async (options: { config: string; output: string }) => {
+    const { readFile } = await import("node:fs/promises");
+    const raw = await readFile(path.resolve(options.config), "utf8");
+    const parsed = JSON.parse(raw) as ActionItemsConfig;
+
+    if (!parsed.actions || !Array.isArray(parsed.actions)) {
+      logger.error("Invalid config: 'actions' must be an array");
+      process.exitCode = 1;
+      return;
+    }
+
+    const rows = generateActionItemRows(parsed.actions);
+    const header = [...BULK_SCHEMA_HEADER_V210];
+    const arrayRows = rows.map((r) => bulkRowToArray(r));
+
+    await writeXlsx(options.output, [{ name: "Action_Items", header, rows: arrayRows }]);
+
+    // Summary by type
+    const typeCounts: Record<string, number> = {};
+    for (const action of parsed.actions) {
+      typeCounts[action.type] = (typeCounts[action.type] ?? 0) + 1;
+    }
+
+    logger.info("Action items applied", {
+      output: options.output,
+      totalRows: rows.length,
+      ...typeCounts,
+    });
+  });
+
+program
+  .command("create-campaign")
+  .description("Generate campaign structure bulk sheet from template config")
+  .requiredOption("--config <file>", "Campaign template config JSON path")
+  .requiredOption("--output <file>", "Output xlsx path")
+  .option("--mode <mode>", "create or update", "create")
+  .option("--input <file>", "SC bulk sheet for update mode (required when --mode=update)")
+  .action(
+    async (options: { config: string; output: string; mode: string; input?: string }) => {
+      const { readFile } = await import("node:fs/promises");
+      const raw = await readFile(path.resolve(options.config), "utf8");
+      const config = JSON.parse(raw) as CampaignTemplateConfig;
+
+      const validation = validateCampaignTemplateConfig(config);
+      if (!validation.valid) {
+        logger.error("Invalid campaign template config", { errors: validation.errors });
+        process.exitCode = 1;
+        return;
+      }
+
+      const mode = options.mode === "update" ? "update" : "create";
+
+      if (mode === "update" && !options.input) {
+        logger.error("--input is required for update mode");
+        process.exitCode = 1;
+        return;
+      }
+
+      let updateCtx;
+      if (mode === "update" && options.input) {
+        const optimConfig = loadOptimisationConfig();
+        const analyzeResult = await runAnalyzePipeline(options.input, optimConfig);
+        updateCtx = { analyzeResult };
+      }
+
+      const { rows, warnings } = generateCampaignTemplate(config, mode, updateCtx);
+
+      for (const w of warnings) {
+        logger.warn(w);
+      }
+
+      const header = mode === "create" ? [...B500_CAMPAIGN_HEADER] : [...BULK_SCHEMA_HEADER_V210];
+      const arrayRows = rows.map((r) => bulkRowToArray(r));
+
+      await writeXlsx(options.output, [{ name: "Campaign_Template", header, rows: arrayRows }]);
+
+      logger.info("Campaign template generated", {
+        output: options.output,
+        mode,
+        totalRows: rows.length,
+        warnings: warnings.length,
+      });
+    },
+  );
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);

@@ -9,18 +9,17 @@ export const generatePlacementRows = (recommendations: PlacementRecommendation[]
     if (rec.recommendedPercentage <= 0) continue;
 
     const row = buildBulkRow({
-      Entity: "Bidding Adjustment",
-      Operation: "Update",
+      Entity: "Campaign",
+      Operation: "update",
       "Campaign Name": rec.campaignName,
       "Campaign ID": rec.campaignId,
+      State: "",
     });
 
     if (rec.placementType === "Top of Search") {
-      row["Placement (Top of Search)"] = "enabled";
-      row.Percentage = rec.recommendedPercentage;
+      row["Placement (Top of Search)"] = String(rec.recommendedPercentage);
     } else {
-      row["Placement (Product Pages)"] = "enabled";
-      row.Percentage = rec.recommendedPercentage;
+      row["Placement (Product Pages)"] = String(rec.recommendedPercentage);
     }
 
     rows.push(row);

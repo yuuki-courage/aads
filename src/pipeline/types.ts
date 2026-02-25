@@ -180,6 +180,27 @@ export interface BulkOutputRow {
   "Campaign Status": string;
 }
 
+export type ActionItemType = "negative_keyword" | "negative_product_targeting" | "keyword" | "placement";
+
+export interface ActionItem {
+  type: ActionItemType;
+  campaignId: string;
+  campaignName: string;
+  adGroupId?: string;
+  adGroupName?: string;
+  keywordText?: string;
+  matchType?: string;
+  bid?: number;
+  asin?: string;
+  placement?: "Top of Search" | "Product Pages";
+  percentage?: number;
+}
+
+export interface ActionItemsConfig {
+  description?: string;
+  actions: ActionItem[];
+}
+
 export interface StrategyData {
   source: "none";
   targetAcos?: number;

@@ -1,0 +1,53 @@
+{
+  "description": "Sample action items config for aads apply-actions command",
+  "actions": [
+    {
+      "type": "negative_keyword",
+      "campaignId": "123456789",
+      "campaignName": "Brand_auto_2502",
+      "adGroupId": "987654321",
+      "adGroupName": "Brand_auto",
+      "keywordText": "competitor brand name",
+      "matchType": "exact"
+    },
+    {
+      "type": "negative_keyword",
+      "campaignId": "123456789",
+      "campaignName": "Brand_auto_2502",
+      "keywordText": "unrelated term",
+      "matchType": "phrase"
+    },
+    {
+      "type": "negative_product_targeting",
+      "campaignId": "123456789",
+      "campaignName": "Brand_asin_2502",
+      "adGroupId": "111222333",
+      "adGroupName": "Brand_asin",
+      "asin": "B0COMPETITOR1"
+    },
+    {
+      "type": "keyword",
+      "campaignId": "444555666",
+      "campaignName": "Brand_phrase_2502",
+      "adGroupId": "777888999",
+      "adGroupName": "Brand_phrase",
+      "keywordText": "high performing keyword",
+      "matchType": "phrase",
+      "bid": 85
+    },
+    {
+      "type": "placement",
+      "campaignId": "123456789",
+      "campaignName": "Brand_auto_2502",
+      "placement": "Top of Search",
+      "percentage": 50
+    },
+    {
+      "type": "placement",
+      "campaignId": "444555666",
+      "campaignName": "Brand_phrase_2502",
+      "placement": "Product Pages",
+      "percentage": 25
+    }
+  ]
+}
