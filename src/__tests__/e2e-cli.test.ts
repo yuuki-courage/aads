@@ -10,7 +10,8 @@ import ExcelJS from "exceljs";
 const exec = promisify(execFile);
 
 const CLI_PATH = path.resolve("src/cli.ts");
-const TSX = path.resolve("node_modules/.bin/tsx");
+const IS_WIN = process.platform === "win32";
+const TSX = path.resolve(`node_modules/.bin/tsx${IS_WIN ? ".cmd" : ""}`);
 
 let tmpDir: string;
 
@@ -22,6 +23,7 @@ const runCli = async (
     const { stdout, stderr } = await exec(TSX, [CLI_PATH, ...args], {
       env: { ...process.env, LOG_LEVEL: "info" },
       timeout: 30_000,
+      shell: IS_WIN,
     });
     return { stdout, stderr, output: stdout + stderr, exitCode: 0 };
   } catch (err: unknown) {
