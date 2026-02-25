@@ -107,10 +107,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, string> = {
   asin: "asin",
 };
 
-export const formatCampaignName = (
-  config: CampaignTemplateConfig,
-  typeKey: string,
-): string => {
+export const formatCampaignName = (config: CampaignTemplateConfig, typeKey: string): string => {
   const template = config.naming?.campaignTemplate ?? "{brand}_{typeLabel}_{suffix}";
   const typeLabels = { ...DEFAULT_TYPE_LABELS, ...config.naming?.typeLabels };
   const typeLabel = typeLabels[typeKey] ?? typeKey;
@@ -122,10 +119,7 @@ export const formatCampaignName = (
     .replace("{suffix}", config.dateSuffix);
 };
 
-export const formatAdGroupName = (
-  config: CampaignTemplateConfig,
-  typeKey: string,
-): string => {
+export const formatAdGroupName = (config: CampaignTemplateConfig, typeKey: string): string => {
   const template = config.naming?.adGroupTemplate ?? "{code}_{descriptor}";
   const descriptors = { ...AD_GROUP_DESCRIPTORS, ...config.naming?.adGroupDescriptors };
   const descriptor = descriptors[typeKey] ?? typeKey;
@@ -148,9 +142,7 @@ export const computeFallbackDefaultBid = (config: CampaignTemplateConfig): numbe
   return CAMPAIGN_TEMPLATE_DEFAULTS.defaultBid;
 };
 
-export const validateCampaignTemplateConfig = (
-  config: unknown,
-): { valid: boolean; errors: string[] } => {
+export const validateCampaignTemplateConfig = (config: unknown): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
   if (!config || typeof config !== "object") {

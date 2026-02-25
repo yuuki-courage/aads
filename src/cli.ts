@@ -480,53 +480,51 @@ program
   .requiredOption("--output <file>", "Output xlsx path")
   .option("--mode <mode>", "create or update", "create")
   .option("--input <file>", "SC bulk sheet for update mode (required when --mode=update)")
-  .action(
-    async (options: { config: string; output: string; mode: string; input?: string }) => {
-      const { readFile } = await import("node:fs/promises");
-      const raw = await readFile(path.resolve(options.config), "utf8");
-      const config = JSON.parse(raw) as CampaignTemplateConfig;
+  .action(async (options: { config: string; output: string; mode: string; input?: string }) => {
+    const { readFile } = await import("node:fs/promises");
+    const raw = await readFile(path.resolve(options.config), "utf8");
+    const config = JSON.parse(raw) as CampaignTemplateConfig;
 
-      const validation = validateCampaignTemplateConfig(config);
-      if (!validation.valid) {
-        logger.error("Invalid campaign template config", { errors: validation.errors });
-        process.exitCode = 1;
-        return;
-      }
+    const validation = validateCampaignTemplateConfig(config);
+    if (!validation.valid) {
+      logger.error("Invalid campaign template config", { errors: validation.errors });
+      process.exitCode = 1;
+      return;
+    }
 
-      const mode = options.mode === "update" ? "update" : "create";
+    const mode = options.mode === "update" ? "update" : "create";
 
-      if (mode === "update" && !options.input) {
-        logger.error("--input is required for update mode");
-        process.exitCode = 1;
-        return;
-      }
+    if (mode === "update" && !options.input) {
+      logger.error("--input is required for update mode");
+      process.exitCode = 1;
+      return;
+    }
 
-      let updateCtx;
-      if (mode === "update" && options.input) {
-        const optimConfig = loadOptimisationConfig();
-        const analyzeResult = await runAnalyzePipeline(options.input, optimConfig);
-        updateCtx = { analyzeResult };
-      }
+    let updateCtx;
+    if (mode === "update" && options.input) {
+      const optimConfig = loadOptimisationConfig();
+      const analyzeResult = await runAnalyzePipeline(options.input, optimConfig);
+      updateCtx = { analyzeResult };
+    }
 
-      const { rows, warnings } = generateCampaignTemplate(config, mode, updateCtx);
+    const { rows, warnings } = generateCampaignTemplate(config, mode, updateCtx);
 
-      for (const w of warnings) {
-        logger.warn(w);
-      }
+    for (const w of warnings) {
+      logger.warn(w);
+    }
 
-      const header = mode === "create" ? [...B500_CAMPAIGN_HEADER] : [...BULK_SCHEMA_HEADER_V210];
-      const arrayRows = rows.map((r) => bulkRowToArray(r));
+    const header = mode === "create" ? [...B500_CAMPAIGN_HEADER] : [...BULK_SCHEMA_HEADER_V210];
+    const arrayRows = rows.map((r) => bulkRowToArray(r));
 
-      await writeXlsx(options.output, [{ name: "Campaign_Template", header, rows: arrayRows }]);
+    await writeXlsx(options.output, [{ name: "Campaign_Template", header, rows: arrayRows }]);
 
-      logger.info("Campaign template generated", {
-        output: options.output,
-        mode,
-        totalRows: rows.length,
-        warnings: warnings.length,
-      });
-    },
-  );
+    logger.info("Campaign template generated", {
+      output: options.output,
+      mode,
+      totalRows: rows.length,
+      warnings: warnings.length,
+    });
+  });
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);

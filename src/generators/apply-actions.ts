@@ -71,5 +71,4 @@ const actionToRow = (action: ActionItem): BulkOutputRow => {
   }
 };
 
-export const generateActionItemRows = (actions: ActionItem[]): BulkOutputRow[] =>
-  actions.map(actionToRow);
+export const generateActionItemRows = (actions: ActionItem[]): BulkOutputRow[] => actions.map(actionToRow);
