@@ -1,0 +1,77 @@
+{
+  "brandName": "SampleBrand",
+  "brandCode": "SB",
+  "dateSuffix": "2502",
+  "portfolioId": "P_123456",
+  "skus": ["SKU_MAIN_001", "SKU_MAIN_002"],
+  "biddingStrategy": "Dynamic bids - down only",
+  "negativeKeywords": ["competitor brand", "unrelated term"],
+  "campaigns": {
+    "auto": {
+      "enabled": true,
+      "dailyBudget": 1000,
+      "defaultBid": 50,
+      "topOfSearchPercentage": 50
+    },
+    "phrase": {
+      "enabled": true,
+      "dailyBudget": 2000,
+      "defaultBid": 60,
+      "keywords": [
+        { "text": "main keyword one", "bid": 80 },
+        { "text": "main keyword two", "bid": 70 },
+        { "text": "secondary keyword" }
+      ],
+      "topOfSearchPercentage": 100
+    },
+    "broad": {
+      "enabled": true,
+      "dailyBudget": 1500,
+      "defaultBid": 40,
+      "keywords": [
+        { "text": "broad keyword one" },
+        { "text": "broad keyword two" }
+      ]
+    },
+    "asin": {
+      "enabled": true,
+      "dailyBudget": 3000,
+      "defaultBid": 70,
+      "targets": [
+        { "asin": "B0COMPETITOR1", "bid": 90 },
+        { "asin": "B0COMPETITOR2", "bid": 85 },
+        { "asin": "B0SIMILAR1" }
+      ]
+    },
+    "manual": [
+      {
+        "name": "SB_Exact_HighPerf_2502",
+        "dailyBudget": 5000,
+        "targetingType": "manual",
+        "biddingStrategy": "Dynamic bids - up and down",
+        "topOfSearchPercentage": 200,
+        "adGroups": [
+          {
+            "name": "SB_exact_top",
+            "defaultBid": 120,
+            "keywords": [
+              { "text": "best product keyword", "bid": 150 },
+              { "text": "top performing term", "bid": 130 }
+            ]
+          }
+        ],
+        "negativeKeywords": ["cheap", "free"]
+      }
+    ]
+  },
+  "naming": {
+    "campaignTemplate": "SP_{brand}_{typeLabel}_{suffix}",
+    "adGroupTemplate": "{code}_{descriptor}",
+    "typeLabels": {
+      "auto": "auto",
+      "phrase": "phrase",
+      "broad": "broad",
+      "asin": "asin"
+    }
+  }
+}

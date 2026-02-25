@@ -86,6 +86,10 @@ export const BULK_SCHEMA_HEADER_V210 = [
   "Campaign Status",
 ] as const;
 
+export const B500_CAMPAIGN_HEADER = BULK_SCHEMA_HEADER_V210.map(
+  (h) => (h === "SKU / ASIN" ? "SKU" : h),
+);
+
 export const SKU_LABEL_RULES = {
   focus: { maxAcos: 0.15, minCvr: 0.05, bidAdjust: 1.2, budgetAdjust: 1.15 },
   nurture: { maxAcos: 0.25, minCvr: 0.03, bidAdjust: 1.05, budgetAdjust: 1.0 },
