@@ -217,3 +217,242 @@ aads seo-report --input "bulk-*.xlsx" --ranking-db data/ranking.db --format json
 # Excel output
 aads seo-report --input "bulk-*.xlsx" --ranking-db data/ranking.db --output seo.xlsx --format xlsx
 ```
+
+---
+
+## `aads generate`
+
+分析結果からAmazon Adsバルクシートを生成します。
+
+### 使用方法
+
+```bash
+aads generate --input <pattern> --output <file> [--blocks <list>]
+```
+
+### オプション
+
+| オプション | 必須 | 説明 |
+|--------|----------|-------------|
+| `--input <pattern>` | Yes | 入力ファイルパスまたはワイルドカード |
+| `--output <file>` | Yes | 出力Excelファイルパス |
+| `--blocks <list>` | No | 実行するブロック番号（カンマ区切り: 1,2,3,3.5,4,5） |
+
+### ブロック一覧
+
+| ブロック | 内容 |
+|---------|------|
+| 1 | 予算更新 |
+| 2 | CPC入札更新 |
+| 3 | Auto→Manual昇格キーワード作成 |
+| 3.5 | 昇格キーワードのネガティブ同期 |
+| 4 | ネガティブキーワード作成 |
+| 5 | プレースメント入札調整 |
+
+### 実行例
+
+```bash
+# 全ブロック実行
+aads generate --input "bulk-*.xlsx" --output output/bulk.xlsx
+
+# 特定ブロックのみ
+aads generate --input bulk.xlsx --output output/bulk.xlsx --blocks 2,5
+```
+
+---
+
+## `aads apply-actions`
+
+施策アクション（ネガティブKW追加、キーワード追加、プレースメント調整等）をJSON設定からバルクシートに変換します。
+
+### 使用方法
+
+```bash
+aads apply-actions --config <file> --output <file>
+```
+
+### オプション
+
+| オプション | 必須 | 説明 |
+|--------|----------|-------------|
+| `--config <file>` | Yes | アクションアイテム設定JSONファイルパス |
+| `--output <file>` | Yes | 出力Excelファイルパス |
+
+### 設定JSONフォーマット
+
+```json
+{
+  "description": "施策の説明（任意）",
+  "actions": [
+    {
+      "type": "negative_keyword",
+      "campaignId": "123456789",
+      "campaignName": "Campaign Name",
+      "adGroupId": "987654321",
+      "adGroupName": "AdGroup Name",
+      "keywordText": "keyword to negate",
+      "matchType": "exact"
+    },
+    {
+      "type": "negative_product_targeting",
+      "campaignId": "123456789",
+      "campaignName": "Campaign Name",
+      "asin": "B0COMPETITOR"
+    },
+    {
+      "type": "keyword",
+      "campaignId": "123456789",
+      "campaignName": "Campaign Name",
+      "adGroupId": "987654321",
+      "adGroupName": "AdGroup Name",
+      "keywordText": "new keyword",
+      "matchType": "phrase",
+      "bid": 75
+    },
+    {
+      "type": "placement",
+      "campaignId": "123456789",
+      "campaignName": "Campaign Name",
+      "placement": "Top of Search",
+      "percentage": 50
+    }
+  ]
+}
+```
+
+### アクションタイプ
+
+| タイプ | Entity | 説明 |
+|--------|--------|------|
+| `negative_keyword` | Negative Keyword / Campaign Negative Keyword | ネガティブKW追加。adGroupIdがあれば広告グループレベル、なければキャンペーンレベル |
+| `negative_product_targeting` | Negative Product Targeting | ネガティブ商品ターゲティング追加 |
+| `keyword` | Keyword | キーワード追加（入札額指定可） |
+| `placement` | Campaign | プレースメント入札調整 |
+
+### 実行例
+
+```bash
+aads apply-actions --config data/samples/action-items-sample.json --output output/actions.xlsx
+```
+
+---
+
+## `aads create-campaign`
+
+キャンペーン構造をJSON設定からバルクシートに変換します。新規作成（create）と既存更新（update）の2モードをサポート。
+
+### 使用方法
+
+```bash
+aads create-campaign --config <file> --output <file> [--mode <create|update>] [--input <file>]
+```
+
+### オプション
+
+| オプション | 必須 | 説明 |
+|--------|----------|-------------|
+| `--config <file>` | Yes | キャンペーンテンプレート設定JSONファイルパス |
+| `--output <file>` | Yes | 出力Excelファイルパス |
+| `--mode <mode>` | No | `create`（デフォルト）または `update` |
+| `--input <file>` | updateモード時必須 | SCバルクシートパス（ID解決用） |
+
+### 設定JSONフォーマット
+
+```json
+{
+  "brandName": "BrandName",
+  "brandCode": "BN",
+  "dateSuffix": "2502",
+  "portfolioId": "P_123456",
+  "skus": ["SKU001", "SKU002"],
+  "biddingStrategy": "Dynamic bids - down only",
+  "negativeKeywords": ["competitor brand"],
+  "campaigns": {
+    "auto": {
+      "enabled": true,
+      "dailyBudget": 1000,
+      "defaultBid": 50,
+      "topOfSearchPercentage": 50
+    },
+    "phrase": {
+      "enabled": true,
+      "dailyBudget": 2000,
+      "defaultBid": 60,
+      "keywords": [
+        { "text": "keyword one", "bid": 80 },
+        { "text": "keyword two" }
+      ]
+    },
+    "broad": {
+      "enabled": true,
+      "dailyBudget": 1500,
+      "defaultBid": 40,
+      "keywords": [
+        { "text": "broad keyword" }
+      ]
+    },
+    "asin": {
+      "enabled": true,
+      "dailyBudget": 3000,
+      "defaultBid": 70,
+      "targets": [
+        { "asin": "B0COMPETITOR1", "bid": 90 },
+        { "asin": "B0COMPETITOR2" }
+      ]
+    },
+    "manual": [
+      {
+        "name": "Custom Campaign Name",
+        "dailyBudget": 5000,
+        "targetingType": "manual",
+        "adGroups": [
+          {
+            "name": "Custom AG",
+            "defaultBid": 100,
+            "keywords": [{ "text": "exact keyword", "bid": 120 }]
+          }
+        ]
+      }
+    ]
+  },
+  "naming": {
+    "campaignTemplate": "{brand}_{typeLabel}_{suffix}",
+    "adGroupTemplate": "{code}_{descriptor}",
+    "typeLabels": { "auto": "auto" },
+    "adGroupDescriptors": { "auto": "auto" }
+  }
+}
+```
+
+### キャンペーンタイプ
+
+| タイプ | ターゲティング | 説明 |
+|--------|--------------|------|
+| `auto` | auto | 自動ターゲティング。キーワード不要 |
+| `phrase` | manual | フレーズ一致キーワード |
+| `broad` | manual | 部分一致キーワード |
+| `asin` | manual | 商品ターゲティング（ASIN指定） |
+| `manual` | 設定による | 自由定義のキャンペーン構造 |
+
+### 命名規則（NamingConvention）
+
+| フィールド | デフォルト | プレースホルダー |
+|-----------|-----------|----------------|
+| `campaignTemplate` | `{brand}_{typeLabel}_{suffix}` | `{brand}`, `{code}`, `{typeLabel}`, `{suffix}` |
+| `adGroupTemplate` | `{code}_{descriptor}` | `{brand}`, `{code}`, `{descriptor}` |
+
+### 実行例
+
+```bash
+# 新規キャンペーン作成
+aads create-campaign \
+  --config data/samples/campaign-template-sample.json \
+  --output output/campaign.xlsx
+
+# 既存キャンペーン更新（SCバルクシート参照）
+aads create-campaign \
+  --config campaign.json \
+  --output output/update.xlsx \
+  --mode update \
+  --input sc-bulk.xlsx
+```
