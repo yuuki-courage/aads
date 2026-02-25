@@ -61,10 +61,7 @@ describe("campaign-template create mode", () => {
           enabled: true,
           dailyBudget: 2000,
           defaultBid: 60,
-          keywords: [
-            { text: "keyword one", bid: 80 },
-            { text: "keyword two" },
-          ],
+          keywords: [{ text: "keyword one", bid: 80 }, { text: "keyword two" }],
         },
       },
       negativeKeywords: ["competitor"],
@@ -113,10 +110,7 @@ describe("campaign-template create mode", () => {
           enabled: true,
           dailyBudget: 3000,
           defaultBid: 70,
-          targets: [
-            { asin: "B0COMPETITOR1", bid: 90 },
-            { asin: "B0COMPETITOR2" },
-          ],
+          targets: [{ asin: "B0COMPETITOR1", bid: 90 }, { asin: "B0COMPETITOR2" }],
         },
       },
     });

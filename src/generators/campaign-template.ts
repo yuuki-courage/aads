@@ -13,10 +13,7 @@ import type {
   CampaignTypeAsin,
   ManualCampaignConfig,
 } from "../config/campaign-template-defaults.js";
-import type {
-  BulkOutputRow,
-  AnalyzePipelineResult,
-} from "../pipeline/types.js";
+import type { BulkOutputRow, AnalyzePipelineResult } from "../pipeline/types.js";
 
 export interface CampaignTemplateUpdateContext {
   analyzeResult: AnalyzePipelineResult;
@@ -44,8 +41,7 @@ const createCampaignRow = (
     "Campaign Targeting Type": opts.targetingType,
     State: "enabled",
     "Daily Budget": opts.dailyBudget,
-    "Bidding Strategy":
-      opts.biddingStrategy ?? config.biddingStrategy ?? CAMPAIGN_TEMPLATE_DEFAULTS.biddingStrategy,
+    "Bidding Strategy": opts.biddingStrategy ?? config.biddingStrategy ?? CAMPAIGN_TEMPLATE_DEFAULTS.biddingStrategy,
   });
 
   if (opts.topOfSearchPercentage != null && opts.topOfSearchPercentage > 0) {
@@ -58,11 +54,7 @@ const createCampaignRow = (
   return row;
 };
 
-const createAdGroupRow = (
-  campaignName: string,
-  adGroupName: string,
-  defaultBid: number,
-): BulkOutputRow =>
+const createAdGroupRow = (campaignName: string, adGroupName: string, defaultBid: number): BulkOutputRow =>
   buildBulkRow({
     Entity: "Ad Group",
     Operation: "create",
@@ -74,11 +66,7 @@ const createAdGroupRow = (
     State: "enabled",
   });
 
-const createProductAdRows = (
-  campaignName: string,
-  adGroupName: string,
-  skus: string[],
-): BulkOutputRow[] =>
+const createProductAdRows = (campaignName: string, adGroupName: string, skus: string[]): BulkOutputRow[] =>
   skus.map((sku) =>
     buildBulkRow({
       Entity: "Product Ad",
@@ -114,10 +102,7 @@ const createKeywordRows = (
     }),
   );
 
-const createNegativeKeywordRows = (
-  campaignName: string,
-  keywords: string[],
-): BulkOutputRow[] =>
+const createNegativeKeywordRows = (campaignName: string, keywords: string[]): BulkOutputRow[] =>
   keywords.map((kw) =>
     buildBulkRow({
       Entity: "Campaign Negative Keyword",
@@ -150,17 +135,12 @@ const createProductTargetingRows = (
     }),
   );
 
-const resolveSkus = (
-  perCampaignSkus: string[] | undefined,
-  globalSkus: string[],
-): string[] => perCampaignSkus && perCampaignSkus.length > 0 ? perCampaignSkus : globalSkus;
+const resolveSkus = (perCampaignSkus: string[] | undefined, globalSkus: string[]): string[] =>
+  perCampaignSkus && perCampaignSkus.length > 0 ? perCampaignSkus : globalSkus;
 
 // ── Create Mode ──
 
-const generateAutoRows = (
-  config: CampaignTemplateConfig,
-  auto: CampaignTypeAuto,
-): BulkOutputRow[] => {
+const generateAutoRows = (config: CampaignTemplateConfig, auto: CampaignTypeAuto): BulkOutputRow[] => {
   const rows: BulkOutputRow[] = [];
   const campaignName = formatCampaignName(config, "auto");
   const adGroupName = formatAdGroupName(config, "auto");
@@ -206,9 +186,7 @@ const generateKeywordTypeRows = (
   );
   rows.push(createAdGroupRow(campaignName, adGroupName, typeConfig.defaultBid));
   rows.push(...createProductAdRows(campaignName, adGroupName, skus));
-  rows.push(
-    ...createKeywordRows(campaignName, adGroupName, typeConfig.keywords, typeKey, typeConfig.defaultBid),
-  );
+  rows.push(...createKeywordRows(campaignName, adGroupName, typeConfig.keywords, typeKey, typeConfig.defaultBid));
 
   if (config.negativeKeywords && config.negativeKeywords.length > 0) {
     rows.push(...createNegativeKeywordRows(campaignName, config.negativeKeywords));
@@ -217,10 +195,7 @@ const generateKeywordTypeRows = (
   return rows;
 };
 
-const generateAsinRows = (
-  config: CampaignTemplateConfig,
-  asinConfig: CampaignTypeAsin,
-): BulkOutputRow[] => {
+const generateAsinRows = (config: CampaignTemplateConfig, asinConfig: CampaignTypeAsin): BulkOutputRow[] => {
   const rows: BulkOutputRow[] = [];
   const campaignName = formatCampaignName(config, "asin");
   const adGroupName = formatAdGroupName(config, "asin");
@@ -237,9 +212,7 @@ const generateAsinRows = (
   );
   rows.push(createAdGroupRow(campaignName, adGroupName, asinConfig.defaultBid));
   rows.push(...createProductAdRows(campaignName, adGroupName, skus));
-  rows.push(
-    ...createProductTargetingRows(campaignName, adGroupName, asinConfig.targets, asinConfig.defaultBid),
-  );
+  rows.push(...createProductTargetingRows(campaignName, adGroupName, asinConfig.targets, asinConfig.defaultBid));
 
   if (config.negativeKeywords && config.negativeKeywords.length > 0) {
     rows.push(...createNegativeKeywordRows(campaignName, config.negativeKeywords));
@@ -248,10 +221,7 @@ const generateAsinRows = (
   return rows;
 };
 
-const generateManualCampaignRows = (
-  config: CampaignTemplateConfig,
-  manual: ManualCampaignConfig,
-): BulkOutputRow[] => {
+const generateManualCampaignRows = (config: CampaignTemplateConfig, manual: ManualCampaignConfig): BulkOutputRow[] => {
   const rows: BulkOutputRow[] = [];
   const campaignName = manual.name;
   const globalSkus = config.skus;
@@ -272,14 +242,10 @@ const generateManualCampaignRows = (
     rows.push(...createProductAdRows(campaignName, ag.name, skus));
 
     if (ag.keywords && ag.keywords.length > 0) {
-      rows.push(
-        ...createKeywordRows(campaignName, ag.name, ag.keywords, "exact", ag.defaultBid),
-      );
+      rows.push(...createKeywordRows(campaignName, ag.name, ag.keywords, "exact", ag.defaultBid));
     }
     if (ag.productTargets && ag.productTargets.length > 0) {
-      rows.push(
-        ...createProductTargetingRows(campaignName, ag.name, ag.productTargets, ag.defaultBid),
-      );
+      rows.push(...createProductTargetingRows(campaignName, ag.name, ag.productTargets, ag.defaultBid));
     }
   }
 
@@ -363,9 +329,7 @@ const generateUpdateRows = (
       const expr = `asin="${target.asin}"`;
       const matchingRecord = records.find(
         (r) =>
-          r.campaignName === campaignName &&
-          r.adGroupName === adGroupName &&
-          r.productTargetingExpression === expr,
+          r.campaignName === campaignName && r.adGroupName === adGroupName && r.productTargetingExpression === expr,
       );
 
       if (matchingRecord) {

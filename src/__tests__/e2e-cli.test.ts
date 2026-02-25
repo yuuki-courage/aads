@@ -229,10 +229,9 @@ describe("E2E: apply-actions", () => {
 
     await writeJson(configPath, { description: "no actions field" });
 
-    const { output, exitCode } = await runCli(
-      ["apply-actions", "--config", configPath, "--output", outputPath],
-      { expectFail: true },
-    );
+    const { output, exitCode } = await runCli(["apply-actions", "--config", configPath, "--output", outputPath], {
+      expectFail: true,
+    });
     expect(exitCode).not.toBe(0);
     expect(output).toContain("'actions' must be an array");
     expect(existsSync(outputPath)).toBe(false);
@@ -266,13 +265,7 @@ describe("E2E: create-campaign", () => {
       },
     });
 
-    const { output } = await runCli([
-      "create-campaign",
-      "--config",
-      configPath,
-      "--output",
-      outputPath,
-    ]);
+    const { output } = await runCli(["create-campaign", "--config", configPath, "--output", outputPath]);
     expect(output).toContain("Campaign template generated");
     expect(output).toContain('"mode":"create"');
 
@@ -357,13 +350,7 @@ describe("E2E: create-campaign", () => {
       },
     });
 
-    const { output } = await runCli([
-      "create-campaign",
-      "--config",
-      configPath,
-      "--output",
-      outputPath,
-    ]);
+    const { output } = await runCli(["create-campaign", "--config", configPath, "--output", outputPath]);
     expect(output).toContain("Campaign template generated");
 
     const sheets = await readXlsx(outputPath);
@@ -406,13 +393,7 @@ describe("E2E: create-campaign", () => {
     const sampleConfig = path.resolve("data/samples/campaign-template-sample.json");
     const outputPath = path.join(tmpDir, "campaign-sample.xlsx");
 
-    const { output } = await runCli([
-      "create-campaign",
-      "--config",
-      sampleConfig,
-      "--output",
-      outputPath,
-    ]);
+    const { output } = await runCli(["create-campaign", "--config", sampleConfig, "--output", outputPath]);
     expect(output).toContain("Campaign template generated");
     expect(output).toContain('"totalRows":40');
 
@@ -420,9 +401,7 @@ describe("E2E: create-campaign", () => {
     expect(sheets[0].rows.length).toBe(40);
 
     // Verify naming convention applied (uses SP_ prefix from sample)
-    const campaignNames = sheets[0].rows
-      .filter((r) => r[1] === "Campaign")
-      .map((r) => String(r[3]));
+    const campaignNames = sheets[0].rows.filter((r) => r[1] === "Campaign").map((r) => String(r[3]));
     expect(campaignNames).toContain("SP_SampleBrand_auto_2502");
     expect(campaignNames).toContain("SP_SampleBrand_phrase_2502");
     expect(campaignNames).toContain("SP_SampleBrand_broad_2502");
@@ -451,13 +430,7 @@ describe("E2E: create-campaign", () => {
       },
     });
 
-    const { output } = await runCli([
-      "create-campaign",
-      "--config",
-      configPath,
-      "--output",
-      outputPath,
-    ]);
+    const { output } = await runCli(["create-campaign", "--config", configPath, "--output", outputPath]);
     expect(output).toContain("Campaign template generated");
 
     const sheets = await readXlsx(outputPath);
@@ -480,10 +453,9 @@ describe("E2E: create-campaign", () => {
       },
     });
 
-    const { output, exitCode } = await runCli(
-      ["create-campaign", "--config", configPath, "--output", outputPath],
-      { expectFail: true },
-    );
+    const { output, exitCode } = await runCli(["create-campaign", "--config", configPath, "--output", outputPath], {
+      expectFail: true,
+    });
     expect(exitCode).not.toBe(0);
     expect(output).toContain("brandName");
   });
@@ -503,15 +475,7 @@ describe("E2E: create-campaign", () => {
     });
 
     const { output, exitCode } = await runCli(
-      [
-        "create-campaign",
-        "--config",
-        configPath,
-        "--output",
-        outputPath,
-        "--mode",
-        "update",
-      ],
+      ["create-campaign", "--config", configPath, "--output", outputPath, "--mode", "update"],
       { expectFail: true },
     );
     expect(exitCode).not.toBe(0);
@@ -551,17 +515,13 @@ describe("E2E: create-campaign", () => {
 
     // Auto campaign ProductAds should use OVERRIDE_SKU
     const autoCampaignName = "SkuBrand_auto_2502";
-    const autoProductAds = rows.filter(
-      (r) => r[1] === "Product Ad" && r[3] === autoCampaignName,
-    );
+    const autoProductAds = rows.filter((r) => r[1] === "Product Ad" && r[3] === autoCampaignName);
     expect(autoProductAds).toHaveLength(1);
     expect(autoProductAds[0][9]).toBe("OVERRIDE_SKU");
 
     // Phrase campaign ProductAds should use global SKUs
     const phraseCampaignName = "SkuBrand_phrase_2502";
-    const phraseProductAds = rows.filter(
-      (r) => r[1] === "Product Ad" && r[3] === phraseCampaignName,
-    );
+    const phraseProductAds = rows.filter((r) => r[1] === "Product Ad" && r[3] === phraseCampaignName);
     expect(phraseProductAds).toHaveLength(2);
     expect(phraseProductAds[0][9]).toBe("GLOBAL_SKU1");
     expect(phraseProductAds[1][9]).toBe("GLOBAL_SKU2");
