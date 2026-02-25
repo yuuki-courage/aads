@@ -17,6 +17,8 @@ Reads Amazon Ads bulk sheet exports (Excel/CSV) and generates actionable optimiz
 | `promotion-report` | Auto-to-Manual promotion candidates + negative keyword suggestions |
 | `seo-report` | SEO organic ranking vs ad keyword integrated report |
 | `generate` | Generate Amazon Ads bulk sheet from analysis results |
+| `apply-actions` | Apply action items (negative KW, keyword, placement) from JSON config |
+| `create-campaign` | Generate campaign structure bulk sheet from template config |
 
 ## Installation
 
@@ -53,6 +55,12 @@ aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx
 
 # Generate only specific blocks (e.g., CPC + Negative keywords)
 aads generate --input "bulk-*.xlsx" --output bulk-update.xlsx --blocks 2,4
+
+# Apply action items from JSON config
+aads apply-actions --config actions.json --output actions.xlsx
+
+# Create new campaign structure from template
+aads create-campaign --config campaign.json --output campaign.xlsx
 ```
 
 ## Commands
@@ -139,6 +147,60 @@ aads generate --input <pattern> --output <file> [--blocks <list>]
 | 3.5 | Negative Sync | Add negative keywords in auto campaign for promoted terms |
 | 4 | Negative | Negative keywords for wasteful search terms |
 | 5 | Placement | Placement bid modifier adjustments (Top of Search / Product Pages) |
+
+### `apply-actions`
+
+Applies action items from a JSON config to generate a bulk sheet for batch operations — negative keywords, keyword additions, product targeting, and placement adjustments.
+
+```bash
+aads apply-actions --config <file> --output <file>
+```
+
+| Option | Description |
+|--------|-------------|
+| `--config <file>` | Action items JSON config path (required) |
+| `--output <file>` | Output xlsx path (required) |
+
+**Supported action types:**
+
+| Type | Description |
+|------|-------------|
+| `negative_keyword` | Add negative keyword (ad group or campaign level) |
+| `negative_product_targeting` | Add negative product targeting (ASIN) |
+| `keyword` | Add keyword with bid |
+| `placement` | Adjust placement bid percentage |
+
+See [`data/samples/action-items-sample.json`](data/samples/action-items-sample.json) for config format.
+
+### `create-campaign`
+
+Generates campaign structure from a template config. Supports new campaign creation and existing campaign updates.
+
+```bash
+aads create-campaign --config <file> --output <file> [--mode <create|update>] [--input <file>]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--config <file>` | Campaign template JSON config path (required) |
+| `--output <file>` | Output xlsx path (required) |
+| `--mode <mode>` | `create` (default) or `update` |
+| `--input <file>` | SC bulk sheet for update mode ID resolution |
+
+**Campaign types:** `auto`, `phrase`, `broad`, `asin`, `manual`
+
+Campaign and ad group names are customizable via `naming` in the config:
+
+```json
+{
+  "naming": {
+    "campaignTemplate": "{brand}_{typeLabel}_{suffix}",
+    "adGroupTemplate": "{code}_{descriptor}"
+  }
+}
+```
+
+See [`data/samples/campaign-template-sample.json`](data/samples/campaign-template-sample.json) for full config format.
 
 ## Configuration
 
