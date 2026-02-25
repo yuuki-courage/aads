@@ -5,7 +5,6 @@ import {
   CAMPAIGN_TEMPLATE_DEFAULTS,
   formatCampaignName,
   formatAdGroupName,
-  computeFallbackDefaultBid,
 } from "../config/campaign-template-defaults.js";
 import type {
   CampaignTemplateConfig,
@@ -17,8 +16,6 @@ import type {
 import type {
   BulkOutputRow,
   AnalyzePipelineResult,
-  CpcRecommendation,
-  NormalizedRecord,
 } from "../pipeline/types.js";
 
 export interface CampaignTemplateUpdateContext {
@@ -258,7 +255,6 @@ const generateManualCampaignRows = (
   const rows: BulkOutputRow[] = [];
   const campaignName = manual.name;
   const globalSkus = config.skus;
-  const fallbackBid = computeFallbackDefaultBid(config);
 
   rows.push(
     createCampaignRow(campaignName, config, {
