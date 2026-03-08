@@ -15,7 +15,32 @@ import { timestampForFilename } from "./utils/date-utils.js";
 import { generateActionItemRows } from "./generators/apply-actions.js";
 import { generateCampaignTemplate } from "./generators/campaign-template.js";
 import { validateCampaignTemplateConfig } from "./config/campaign-template-defaults.js";
-import type { AnalyzePipelineResult, OutputFormat, StrategyData, ActionItemsConfig } from "./pipeline/types.js";
+import {
+  MEASURE_KPI_LABELS,
+  addMeasureLog,
+  addNoteToMeasureLog,
+  calcMeasureReminder,
+  compareMeasureEffect,
+  getMeasureLogById,
+  getMeasurePatternById,
+  listMeasureLogs,
+  loadMeasurePatterns,
+  removeMeasureLog,
+  saveMeasureCompareToLog,
+} from "./analysis/measure-effect.js";
+import { runMeasureLlmAnalysis } from "./research/measure-llm.js";
+import type {
+  AnalyzePipelineResult,
+  OutputFormat,
+  StrategyData,
+  ActionItemsConfig,
+  MeasureCompareResult,
+  MeasureKpiDiff,
+  MeasureKpiKey,
+  MeasureLogEntry,
+  MeasureLogStatus,
+  MeasurePattern,
+} from "./pipeline/types.js";
 import type { CampaignTemplateConfig } from "./config/campaign-template-defaults.js";
 import type { CampaignLayerId } from "./config/campaign-layer-policy.js";
 
@@ -525,6 +550,735 @@ program
       warnings: warnings.length,
     });
   });
+
+// === measure helpers ===
+
+const parseCsvList = (value?: string): string[] => {
+  if (!value) return [];
+  return value.split(",").map((v) => v.trim()).filter((v) => v !== "");
+};
+
+const toMeasureLogStatus = (value?: string): MeasureLogStatus | undefined => {
+  if (!value) return undefined;
+  const raw = value.trim().toLowerCase();
+  if (raw === "pending" || raw === "completed") return raw;
+  return undefined;
+};
+
+const isRatioKpi = (kpi: MeasureKpiKey): boolean => kpi === "ctr" || kpi === "cvr" || kpi === "acos";
+const isCurrencyKpi = (kpi: MeasureKpiKey): boolean => kpi === "spend" || kpi === "sales" || kpi === "cpc" || kpi === "cpa";
+
+const formatMeasureKpiValue = (kpi: MeasureKpiKey, value: number): string => {
+  if (isRatioKpi(kpi)) return toPct(value);
+  if (kpi === "roas") return value.toFixed(2);
+  if (isCurrencyKpi(kpi)) return Math.round(value).toLocaleString();
+  return Math.round(value).toLocaleString();
+};
+
+const formatMeasureKpiDiffValue = (kpi: MeasureKpiKey, diff: number): string => {
+  const sign = diff >= 0 ? "+" : "-";
+  const abs = Math.abs(diff);
+  if (isRatioKpi(kpi)) return `${sign}${(abs * 100).toFixed(2)}pt`;
+  if (kpi === "roas") return `${sign}${abs.toFixed(2)}`;
+  if (isCurrencyKpi(kpi)) return `${sign}${Math.round(abs).toLocaleString()}`;
+  return `${sign}${Math.round(abs).toLocaleString()}`;
+};
+
+const formatChangeRate = (changeRate: number): string => {
+  const sign = changeRate >= 0 ? "+" : "";
+  return `${sign}${(changeRate * 100).toFixed(2)}%`;
+};
+
+const formatHypothesisConfidence = (value: "high" | "medium" | "low"): string => value;
+
+const toVerdictLabel = (verdict: MeasureCompareResult["verdict"]): string => {
+  if (verdict === "improved") return "improved";
+  if (verdict === "degraded") return "degraded";
+  return "neutral";
+};
+
+const toMeasureCompareMarkdown = (result: MeasureCompareResult): string => {
+  const focusRows = result.focusDiffs
+    .map((item) => {
+      const kpiLabel = MEASURE_KPI_LABELS[item.kpi];
+      return `| ${kpiLabel} | ${formatMeasureKpiValue(item.kpi, item.before)} | ${formatMeasureKpiValue(item.kpi, item.after)} | ${formatMeasureKpiDiffValue(item.kpi, item.diff)} | ${formatChangeRate(item.changeRate)} |`;
+    })
+    .join("\n");
+
+  const criteriaRows = result.criteriaEvaluations
+    .map((item) => {
+      const pass = item.passed ? "pass" : "fail";
+      return `| ${item.criterion.label} | ${MEASURE_KPI_LABELS[item.criterion.kpi]} | ${item.criterion.direction} | ${(item.criterion.threshold * 100).toFixed(2)}% | ${formatChangeRate(item.changeRate)} | ${pass} |`;
+    })
+    .join("\n");
+
+  const campaignRows = result.campaignDiffs
+    .slice(0, 20)
+    .map((item) => {
+      const status = item.isNew ? "new" : item.isRemoved ? "removed" : "";
+      return `| ${item.campaignName} | ${status} | ${formatMeasureKpiValue("sales", item.before.sales)} | ${formatMeasureKpiValue("sales", item.after.sales)} | ${formatChangeRate((item.after.sales - item.before.sales) / Math.max(Math.abs(item.before.sales), 1))} | ${toPct(item.before.acos)} | ${toPct(item.after.acos)} |`;
+    })
+    .join("\n");
+
+  const budgetSimulationRows = result.budgetSimulation
+    ? [
+        `| Before Daily Budget | ${Math.round(result.budgetSimulation.beforeTotalDailyBudget).toLocaleString()} |`,
+        `| After Daily Budget | ${Math.round(result.budgetSimulation.afterTotalDailyBudget).toLocaleString()} |`,
+        `| Budget Change | ${formatChangeRate(result.budgetSimulation.budgetChangeRate)} |`,
+        `| Before ROAS | ${result.budgetSimulation.beforeRoas.toFixed(2)} |`,
+        `| Expected Daily Sales | ${Math.round(result.budgetSimulation.expectedDailySales).toLocaleString()} |`,
+        `| Actual Daily Sales | ${Math.round(result.budgetSimulation.actualDailySales).toLocaleString()} |`,
+        `| Expected vs Actual | ${formatChangeRate(result.budgetSimulation.expectedVsActualRate)} |`,
+      ].join("\n")
+    : "";
+
+  const budgetCampaignRows = result.budgetSimulation?.campaignBudgetDiffs
+    .slice(0, 20)
+    .map((item) => {
+      const status = item.isNew ? "new" : item.isRemoved ? "removed" : "";
+      return `| ${item.campaignName} | ${status} | ${Math.round(item.beforeDailyBudget).toLocaleString()} | ${Math.round(item.afterDailyBudget).toLocaleString()} | ${formatChangeRate(item.budgetChangeRate)} |`;
+    })
+    .join("\n");
+
+  const hypothesisRows = (result.hypotheses ?? [])
+    .map((item) => {
+      return `| ${item.id} | ${item.pattern} | ${item.hypothesis} | ${formatHypothesisConfidence(item.confidence)} | ${item.suggestedAction} | ${item.suggestedMetrics.join(" / ")} |`;
+    })
+    .join("\n");
+
+  const budgetSection = result.budgetSimulation
+    ? [
+        "",
+        "## Budget Simulation",
+        "| Item | Value |",
+        "|---|---:|",
+        budgetSimulationRows,
+        "",
+        "### Campaign Budget Diff (Top 20 by budget delta)",
+        "| Campaign | Status | DailyBudget(Before) | DailyBudget(After) | Budget Change |",
+        "|---|---|---:|---:|---:|",
+        budgetCampaignRows || "| - | - | - | - | - |",
+      ].join("\n")
+    : "";
+
+  const hypothesisSection =
+    (result.hypotheses?.length ?? 0) > 0
+      ? [
+          "",
+          "## Hypotheses",
+          "| ID | Pattern | Hypothesis | Confidence | Suggested Action | Suggested Metrics |",
+          "|---|---|---|---|---|---|",
+          hypothesisRows,
+        ].join("\n")
+      : "";
+
+  const dateRangeLine =
+    result.beforeDateRange && result.afterDateRange
+      ? `- Before: ${result.beforeDateRange.startDate} - ${result.beforeDateRange.endDate} (${result.beforeDateRange.days}d)\n- After: ${result.afterDateRange.startDate} - ${result.afterDateRange.endDate} (${result.afterDateRange.days}d)`
+      : "- Date range: unknown";
+
+  const llmSection = result.llmAnalysis ? `\n## LLM Analysis\n\n${result.llmAnalysis}\n` : "";
+
+  return [
+    `# Measure Effect Report: ${result.measureName ?? result.patternName}`,
+    "",
+    `GeneratedAt: ${result.generatedAt}`,
+    `Pattern: ${result.patternName} (${result.patternId})`,
+    `Verdict: ${toVerdictLabel(result.verdict)}`,
+    "",
+    "## Date Range",
+    dateRangeLine,
+    "",
+    "## Focus KPI Diff",
+    "| KPI | Before | After | Diff | Change |",
+    "|---|---:|---:|---:|---:|",
+    focusRows || "| - | - | - | - | - |",
+    "",
+    "## Criteria Evaluation",
+    "| Criteria | KPI | Direction | Threshold | Change | Result |",
+    "|---|---|---|---:|---:|---|",
+    criteriaRows || "| - | - | - | - | - | - |",
+    "",
+    "## Campaign Diff (Top 20 by sales delta)",
+    "| Campaign | Status | Sales(Before) | Sales(After) | Sales Change | ACOS(Before) | ACOS(After) |",
+    "|---|---|---:|---:|---:|---:|---:|",
+    campaignRows || "| - | - | - | - | - | - | - |",
+    budgetSection,
+    hypothesisSection,
+    llmSection,
+  ].join("\n");
+};
+
+const printMeasureCompareConsole = (result: MeasureCompareResult): void => {
+  console.log("\nMeasure Effect Compare");
+  console.log(`Pattern: ${result.patternName} (${result.patternId})`);
+  console.log(`Verdict: ${toVerdictLabel(result.verdict)}`);
+  if (result.measureName) console.log(`Measure: ${result.measureName}`);
+  if (result.beforeDateRange) {
+    console.log(
+      `Before: ${result.beforeDateRange.startDate} - ${result.beforeDateRange.endDate} (${result.beforeDateRange.days}d)`,
+    );
+  }
+  if (result.afterDateRange) {
+    console.log(`After : ${result.afterDateRange.startDate} - ${result.afterDateRange.endDate} (${result.afterDateRange.days}d)`);
+  }
+  console.log("\nFocus KPI");
+  console.table(
+    result.focusDiffs.map((item) => ({
+      kpi: MEASURE_KPI_LABELS[item.kpi],
+      before: formatMeasureKpiValue(item.kpi, item.before),
+      after: formatMeasureKpiValue(item.kpi, item.after),
+      diff: formatMeasureKpiDiffValue(item.kpi, item.diff),
+      change: formatChangeRate(item.changeRate),
+    })),
+  );
+
+  if (result.criteriaEvaluations.length > 0) {
+    console.log("\nCriteria");
+    console.table(
+      result.criteriaEvaluations.map((item) => ({
+        criteria: item.criterion.label,
+        kpi: MEASURE_KPI_LABELS[item.criterion.kpi],
+        direction: item.criterion.direction,
+        threshold: `${(item.criterion.threshold * 100).toFixed(2)}%`,
+        change: formatChangeRate(item.changeRate),
+        result: item.passed ? "pass" : "fail",
+      })),
+    );
+  }
+
+  if (result.budgetSimulation) {
+    console.log("\nBudget Simulation");
+    console.table([
+      {
+        beforeDailyBudget: Math.round(result.budgetSimulation.beforeTotalDailyBudget).toLocaleString(),
+        afterDailyBudget: Math.round(result.budgetSimulation.afterTotalDailyBudget).toLocaleString(),
+        budgetChange: formatChangeRate(result.budgetSimulation.budgetChangeRate),
+        beforeRoas: result.budgetSimulation.beforeRoas.toFixed(2),
+        expectedDailySales: Math.round(result.budgetSimulation.expectedDailySales).toLocaleString(),
+        actualDailySales: Math.round(result.budgetSimulation.actualDailySales).toLocaleString(),
+        expectedVsActual: formatChangeRate(result.budgetSimulation.expectedVsActualRate),
+      },
+    ]);
+
+    console.log("\nCampaign Budget Diff (Top 10)");
+    console.table(
+      result.budgetSimulation.campaignBudgetDiffs.slice(0, 10).map((item) => ({
+        campaign: item.campaignName,
+        status: item.isNew ? "new" : item.isRemoved ? "removed" : "",
+        beforeDailyBudget: Math.round(item.beforeDailyBudget).toLocaleString(),
+        afterDailyBudget: Math.round(item.afterDailyBudget).toLocaleString(),
+        budgetChange: formatChangeRate(item.budgetChangeRate),
+      })),
+    );
+  }
+
+  console.log("\nCampaign Diff (Top 10)");
+  console.table(
+    result.campaignDiffs.slice(0, 10).map((item) => ({
+      campaign: item.campaignName,
+      status: item.isNew ? "new" : item.isRemoved ? "removed" : "",
+      salesBefore: formatMeasureKpiValue("sales", item.before.sales),
+      salesAfter: formatMeasureKpiValue("sales", item.after.sales),
+      salesChange: formatChangeRate((item.after.sales - item.before.sales) / Math.max(Math.abs(item.before.sales), 1)),
+      acosBefore: toPct(item.before.acos),
+      acosAfter: toPct(item.after.acos),
+    })),
+  );
+
+  if ((result.hypotheses?.length ?? 0) > 0) {
+    console.log("\nHypotheses");
+    console.table(
+      (result.hypotheses ?? []).map((item) => ({
+        id: item.id,
+        pattern: item.pattern,
+        confidence: formatHypothesisConfidence(item.confidence),
+        hypothesis: item.hypothesis,
+        suggestedAction: item.suggestedAction,
+        suggestedMetrics: item.suggestedMetrics.join(" / "),
+      })),
+    );
+  }
+
+  if (result.llmAnalysis) {
+    console.log("\nLLM Analysis");
+    console.log(result.llmAnalysis);
+  }
+};
+
+const toMeasureLogMarkdown = (
+  entries: MeasureLogEntry[],
+  patternMap: Map<string, MeasurePattern>,
+): string => {
+  const now = new Date();
+  const rows = entries
+    .map((entry) => {
+      const pattern = patternMap.get(entry.patternId);
+      const patternName = pattern?.name ?? entry.patternId;
+      const { reminder } = pattern
+        ? calcMeasureReminder(entry, pattern, now)
+        : { reminder: "" };
+      const notesCount = entry.notes?.length ?? 0;
+      const notesSummary = notesCount > 0 ? `${notesCount}件` : "-";
+      return `| ${entry.id} | ${entry.date} | ${patternName} | ${entry.name} | ${entry.status} | ${notesSummary} | ${reminder} |`;
+    })
+    .join("\n");
+  return [
+    "| ID | Date | Pattern | Name | Status | Notes | Reminder |",
+    "|---|---|---|---|---|---|---|",
+    rows || "| - | - | - | - | - | - | - |",
+  ].join("\n");
+};
+
+const getDiffByKpi = (diffs: MeasureKpiDiff[], kpi: MeasureKpiKey): MeasureKpiDiff | undefined => {
+  return diffs.find((item) => item.kpi === kpi);
+};
+
+const writeMeasureCompareXlsx = async (outputPath: string, result: MeasureCompareResult): Promise<void> => {
+  const overallSheet = {
+    name: "Overall_Diff",
+    header: ["KPI", "Before", "After", "Diff", "ChangeRate"],
+    rows: result.overallDiffs.map((item) => [item.kpi, item.before, item.after, item.diff, item.changeRate]),
+  };
+
+  const criteriaSheet = {
+    name: "Criteria",
+    header: ["Label", "KPI", "Direction", "Threshold", "Before", "After", "ChangeRate", "Passed"],
+    rows: result.criteriaEvaluations.map((item) => [
+      item.criterion.label,
+      item.criterion.kpi,
+      item.criterion.direction,
+      item.criterion.threshold,
+      item.before,
+      item.after,
+      item.changeRate,
+      item.passed ? "yes" : "no",
+    ]),
+  };
+
+  const campaignHeader = ["CampaignId", "CampaignName", "IsNew", "IsRemoved"];
+  for (const kpi of result.focusKpis) {
+    campaignHeader.push(`${kpi}_before`, `${kpi}_after`, `${kpi}_change_rate`);
+  }
+  const campaignSheet = {
+    name: "Campaign_Diff",
+    header: campaignHeader,
+    rows: result.campaignDiffs.map((item) => {
+      const row: Array<string | number> = [
+        item.campaignId,
+        item.campaignName,
+        item.isNew ? "yes" : "no",
+        item.isRemoved ? "yes" : "no",
+      ];
+      for (const kpi of result.focusKpis) {
+        const diff = getDiffByKpi(item.focusDiffs, kpi);
+        row.push(diff?.before ?? 0, diff?.after ?? 0, diff?.changeRate ?? 0);
+      }
+      return row;
+    }),
+  };
+
+  const sheets = [overallSheet, criteriaSheet, campaignSheet];
+  if (result.budgetSimulation) {
+    sheets.push({
+      name: "Budget_Simulation",
+      header: [
+        "BeforeDailyBudget",
+        "AfterDailyBudget",
+        "BudgetChangeRate",
+        "BeforeRoas",
+        "ExpectedDailySales",
+        "ActualDailySales",
+        "ExpectedVsActualRate",
+        "BeforeDays",
+        "AfterDays",
+      ],
+      rows: [
+        [
+          result.budgetSimulation.beforeTotalDailyBudget,
+          result.budgetSimulation.afterTotalDailyBudget,
+          result.budgetSimulation.budgetChangeRate,
+          result.budgetSimulation.beforeRoas,
+          result.budgetSimulation.expectedDailySales,
+          result.budgetSimulation.actualDailySales,
+          result.budgetSimulation.expectedVsActualRate,
+          result.budgetSimulation.beforeDays,
+          result.budgetSimulation.afterDays,
+        ],
+      ],
+    });
+
+    sheets.push({
+      name: "Campaign_Budget_Diff",
+      header: ["CampaignId", "CampaignName", "IsNew", "IsRemoved", "BeforeDailyBudget", "AfterDailyBudget", "BudgetChangeRate"],
+      rows: result.budgetSimulation.campaignBudgetDiffs.map((item) => [
+        item.campaignId,
+        item.campaignName,
+        item.isNew ? "yes" : "no",
+        item.isRemoved ? "yes" : "no",
+        item.beforeDailyBudget,
+        item.afterDailyBudget,
+        item.budgetChangeRate,
+      ]),
+    });
+  }
+
+  if ((result.hypotheses?.length ?? 0) > 0) {
+    sheets.push({
+      name: "Hypotheses",
+      header: ["Id", "Pattern", "Hypothesis", "Confidence", "SuggestedAction", "SuggestedMetrics"],
+      rows: (result.hypotheses ?? []).map((item) => [
+        item.id,
+        item.pattern,
+        item.hypothesis,
+        item.confidence,
+        item.suggestedAction,
+        item.suggestedMetrics.join(" / "),
+      ]),
+    });
+  }
+
+  if (result.llmAnalysis) {
+    sheets.push({
+      name: "LLM_Analysis",
+      header: ["Section", "Content"],
+      rows: [["analysis", result.llmAnalysis]],
+    });
+  }
+
+  await writeXlsx(outputPath, sheets);
+};
+
+// === measure-log command ===
+
+program
+  .command("measure-log")
+  .description("Manage measure execution logs")
+  .option("--list", "List entries")
+  .option("--add", "Add an entry")
+  .option("--remove <id>", "Remove an entry by id")
+  .option("--pattern <id>", "Measure pattern id")
+  .option("--name <text>", "Measure name")
+  .option("--date <yyyy-mm-dd>", "Measure execution date")
+  .option("--description <text>", "Measure description")
+  .option("--status <status>", "pending | completed")
+  .option("--id <entry-id>", "Target entry ID (for --note)")
+  .option("--note <text>", "Add a note (standalone: requires --id; with --add: initial note)")
+  .option("--format <type>", "console | json | markdown", "console")
+  .action(
+    async (options: {
+      list?: boolean;
+      add?: boolean;
+      remove?: string;
+      pattern?: string;
+      name?: string;
+      date?: string;
+      description?: string;
+      status?: string;
+      id?: string;
+      note?: string;
+      format?: string;
+    }) => {
+      const format = toOutputFormat(options.format, "console");
+      const status = toMeasureLogStatus(options.status);
+      if (options.status && !status) {
+        throw new Error(`Invalid status: ${options.status}. expected pending | completed`);
+      }
+
+      if (options.note && !options.add && !options.remove) {
+        if (!options.id) throw new Error("--id is required with --note");
+        const updated = await addNoteToMeasureLog(options.id, options.note);
+        if (!updated) throw new Error(`Measure log not found: ${options.id}`);
+
+        if (format === "json") {
+          console.log(JSON.stringify(updated, null, 2));
+          return;
+        }
+        logger.info("Note added", {
+          id: updated.id,
+          name: updated.name,
+          notesCount: updated.notes?.length ?? 0,
+          latestNote: options.note,
+        });
+        return;
+      }
+
+      if (options.add) {
+        if (!options.pattern) throw new Error("--pattern is required with --add");
+        if (!options.name) throw new Error("--name is required with --add");
+        if (!options.date) throw new Error("--date is required with --add");
+
+        const pattern = await getMeasurePatternById(options.pattern);
+        if (!pattern) throw new Error(`Unknown pattern: ${options.pattern}`);
+
+        const entry = await addMeasureLog({
+          patternId: options.pattern,
+          name: options.name,
+          date: options.date,
+          description: options.description,
+          status,
+          note: options.note,
+        });
+
+        if (format === "json") {
+          console.log(JSON.stringify(entry, null, 2));
+          return;
+        }
+        if (format === "markdown") {
+          const table = toMeasureLogMarkdown([entry], new Map([[pattern.id, pattern]]));
+          console.log(table);
+          return;
+        }
+
+        const { reminder } = calcMeasureReminder(entry, pattern);
+        logger.info("Measure log added", {
+          id: entry.id,
+          patternId: entry.patternId,
+          name: entry.name,
+          date: entry.date,
+          status: entry.status,
+          reminder,
+        });
+        return;
+      }
+
+      if (options.remove) {
+        const removed = await removeMeasureLog(options.remove);
+        if (!removed) {
+          throw new Error(`Measure log not found: ${options.remove}`);
+        }
+        logger.info("Measure log removed", { id: options.remove });
+        return;
+      }
+
+      if (options.list || (!options.add && !options.remove)) {
+        const [entries, patterns] = await Promise.all([
+          listMeasureLogs({ status, patternId: options.pattern }),
+          loadMeasurePatterns(),
+        ]);
+        const patternMap = new Map(patterns.map((p) => [p.id, p]));
+        const now = new Date();
+
+        if (format === "json") {
+          const enriched = entries.map((entry) => {
+            const pattern = patternMap.get(entry.patternId);
+            const rem = pattern ? calcMeasureReminder(entry, pattern, now) : { daysElapsed: 0, reminder: "" };
+            return { ...entry, daysElapsed: rem.daysElapsed, reminder: rem.reminder };
+          });
+          console.log(JSON.stringify(enriched, null, 2));
+          return;
+        }
+        if (format === "markdown") {
+          console.log(toMeasureLogMarkdown(entries, patternMap));
+          return;
+        }
+
+        console.table(
+          entries.map((entry) => {
+            const pattern = patternMap.get(entry.patternId);
+            const { reminder } = pattern
+              ? calcMeasureReminder(entry, pattern, now)
+              : { reminder: "" };
+            return {
+              id: entry.id,
+              date: entry.date,
+              pattern: pattern?.name ?? entry.patternId,
+              name: entry.name,
+              status: entry.status,
+              notes: entry.notes?.length ?? 0,
+              reminder,
+            };
+          }),
+        );
+      }
+    },
+  );
+
+// === measure-compare command ===
+
+program
+  .command("measure-compare")
+  .description("Compare before/after KPI for a measure")
+  .option("--pattern <id>", "Measure pattern id")
+  .option("--log-id <id>", "Resolve pattern and metadata from measure-log entry")
+  .requiredOption("--before <pattern>", "Before input pattern")
+  .requiredOption("--after <pattern>", "After input pattern")
+  .option("--campaigns <list>", "Comma separated campaign ids or names")
+  .option("--asins <list>", "Comma separated ASINs")
+  .option("--name <text>", "Measure name (for custom)")
+  .option("--description <text>", "Measure description")
+  .option("--with-llm", "Run LLM analysis (mainly for custom pattern)")
+  .option("--output <file>", "Output file path")
+  .option("--format <type>", "console | json | markdown | xlsx", "console")
+  .action(
+    async (options: {
+      pattern?: string;
+      logId?: string;
+      before: string;
+      after: string;
+      campaigns?: string;
+      asins?: string;
+      name?: string;
+      description?: string;
+      withLlm?: boolean;
+      output?: string;
+      format?: string;
+    }) => {
+      const logEntry = options.logId ? await getMeasureLogById(options.logId) : undefined;
+      if (options.logId && !logEntry) {
+        throw new Error(`Measure log not found: ${options.logId}`);
+      }
+
+      const patternId = options.pattern ?? logEntry?.patternId;
+      if (!patternId) {
+        throw new Error("Pattern is required. specify --pattern or --log-id");
+      }
+      const pattern = await getMeasurePatternById(patternId);
+      if (!pattern) {
+        throw new Error(`Unknown pattern: ${patternId}`);
+      }
+
+      const config = loadOptimisationConfig();
+      const [beforeResult, afterResult] = await Promise.all([
+        runAnalyzePipeline(options.before, config),
+        runAnalyzePipeline(options.after, config),
+      ]);
+
+      const compareResultBase = compareMeasureEffect({
+        before: beforeResult,
+        after: afterResult,
+        beforeInput: options.before,
+        afterInput: options.after,
+        pattern,
+        filters: {
+          campaigns: parseCsvList(options.campaigns),
+          asins: parseCsvList(options.asins),
+        },
+        logEntry,
+        measureName: options.name,
+        measureDescription: options.description,
+      });
+
+      let compareResult = compareResultBase;
+      if (options.withLlm) {
+        const llm = await runMeasureLlmAnalysis(compareResult, options.description ?? logEntry?.description);
+        if (llm) {
+          compareResult = {
+            ...compareResult,
+            llmAnalysis: llm,
+          };
+        }
+      }
+
+      if (options.logId) {
+        await saveMeasureCompareToLog(options.logId, compareResult);
+      }
+
+      const format = toOutputFormat(options.format, "console");
+      const outputPath =
+        options.output ??
+        (format === "xlsx" ? path.resolve("output", `measure-compare-${timestampForFilename()}.xlsx`) : undefined);
+
+      if (format === "json") {
+        const content = JSON.stringify(compareResult, null, 2);
+        if (outputPath) {
+          await writeTextFile(outputPath, content);
+          logger.info("Measure compare JSON saved", { output: outputPath });
+        } else {
+          console.log(content);
+        }
+        return;
+      }
+
+      if (format === "markdown") {
+        const content = toMeasureCompareMarkdown(compareResult);
+        if (outputPath) {
+          await writeTextFile(outputPath, content);
+          logger.info("Measure compare markdown saved", { output: outputPath });
+        } else {
+          console.log(content);
+        }
+        return;
+      }
+
+      if (format === "xlsx" || (outputPath && outputPath.toLowerCase().endsWith(".xlsx"))) {
+        const target = outputPath ?? path.resolve("output", `measure-compare-${timestampForFilename()}.xlsx`);
+        await writeMeasureCompareXlsx(target, compareResult);
+        logger.info("Measure compare xlsx generated", { output: target });
+        return;
+      }
+
+      printMeasureCompareConsole(compareResult);
+    },
+  );
+
+// === measure-report command ===
+
+program
+  .command("measure-report")
+  .description("Generate measure report from saved compare result")
+  .option("--log-id <id>", "Measure log id")
+  .option("--output <file>", "Output file path")
+  .option("--format <type>", "console | json | markdown | xlsx", "markdown")
+  .action(
+    async (options: {
+      logId?: string;
+      output?: string;
+      format?: string;
+    }) => {
+      let targetLog: MeasureLogEntry | undefined;
+      if (options.logId) {
+        targetLog = await getMeasureLogById(options.logId);
+      } else {
+        const entries = await listMeasureLogs();
+        targetLog = entries.find((entry) => entry.lastCompare);
+      }
+
+      if (!targetLog) {
+        throw new Error("No measure log found. specify --log-id or run measure-compare with --log-id first");
+      }
+      if (!targetLog.lastCompare) {
+        throw new Error(`No compare result saved for log: ${targetLog.id}`);
+      }
+
+      const compareResult = targetLog.lastCompare;
+      const format = toOutputFormat(options.format, "markdown");
+      const outputPath =
+        options.output ??
+        (format === "xlsx" ? path.resolve("output", `measure-report-${timestampForFilename()}.xlsx`) : undefined);
+
+      if (format === "json") {
+        const content = JSON.stringify(compareResult, null, 2);
+        if (outputPath) {
+          await writeTextFile(outputPath, content);
+          logger.info("Measure report JSON saved", { output: outputPath });
+        } else {
+          console.log(content);
+        }
+        return;
+      }
+
+      if (format === "markdown") {
+        const content = toMeasureCompareMarkdown(compareResult);
+        if (outputPath) {
+          await writeTextFile(outputPath, content);
+          logger.info("Measure report markdown saved", { output: outputPath });
+        } else {
+          console.log(content);
+        }
+        return;
+      }
+
+      if (format === "xlsx" || (outputPath && outputPath.toLowerCase().endsWith(".xlsx"))) {
+        const target = outputPath ?? path.resolve("output", `measure-report-${timestampForFilename()}.xlsx`);
+        await writeMeasureCompareXlsx(target, compareResult);
+        logger.info("Measure report xlsx generated", { output: target });
+        return;
+      }
+
+      printMeasureCompareConsole(compareResult);
+    },
+  );
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
