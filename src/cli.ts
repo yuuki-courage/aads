@@ -555,7 +555,10 @@ program
 
 const parseCsvList = (value?: string): string[] => {
   if (!value) return [];
-  return value.split(",").map((v) => v.trim()).filter((v) => v !== "");
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter((v) => v !== "");
 };
 
 const toMeasureLogStatus = (value?: string): MeasureLogStatus | undefined => {
@@ -566,7 +569,8 @@ const toMeasureLogStatus = (value?: string): MeasureLogStatus | undefined => {
 };
 
 const isRatioKpi = (kpi: MeasureKpiKey): boolean => kpi === "ctr" || kpi === "cvr" || kpi === "acos";
-const isCurrencyKpi = (kpi: MeasureKpiKey): boolean => kpi === "spend" || kpi === "sales" || kpi === "cpc" || kpi === "cpa";
+const isCurrencyKpi = (kpi: MeasureKpiKey): boolean =>
+  kpi === "spend" || kpi === "sales" || kpi === "cpc" || kpi === "cpa";
 
 const formatMeasureKpiValue = (kpi: MeasureKpiKey, value: number): string => {
   if (isRatioKpi(kpi)) return toPct(value);
@@ -720,7 +724,9 @@ const printMeasureCompareConsole = (result: MeasureCompareResult): void => {
     );
   }
   if (result.afterDateRange) {
-    console.log(`After : ${result.afterDateRange.startDate} - ${result.afterDateRange.endDate} (${result.afterDateRange.days}d)`);
+    console.log(
+      `After : ${result.afterDateRange.startDate} - ${result.afterDateRange.endDate} (${result.afterDateRange.days}d)`,
+    );
   }
   console.log("\nFocus KPI");
   console.table(
@@ -806,18 +812,13 @@ const printMeasureCompareConsole = (result: MeasureCompareResult): void => {
   }
 };
 
-const toMeasureLogMarkdown = (
-  entries: MeasureLogEntry[],
-  patternMap: Map<string, MeasurePattern>,
-): string => {
+const toMeasureLogMarkdown = (entries: MeasureLogEntry[], patternMap: Map<string, MeasurePattern>): string => {
   const now = new Date();
   const rows = entries
     .map((entry) => {
       const pattern = patternMap.get(entry.patternId);
       const patternName = pattern?.name ?? entry.patternId;
-      const { reminder } = pattern
-        ? calcMeasureReminder(entry, pattern, now)
-        : { reminder: "" };
+      const { reminder } = pattern ? calcMeasureReminder(entry, pattern, now) : { reminder: "" };
       const notesCount = entry.notes?.length ?? 0;
       const notesSummary = notesCount > 0 ? `${notesCount}件` : "-";
       return `| ${entry.id} | ${entry.date} | ${patternName} | ${entry.name} | ${entry.status} | ${notesSummary} | ${reminder} |`;
@@ -910,7 +911,15 @@ const writeMeasureCompareXlsx = async (outputPath: string, result: MeasureCompar
 
     sheets.push({
       name: "Campaign_Budget_Diff",
-      header: ["CampaignId", "CampaignName", "IsNew", "IsRemoved", "BeforeDailyBudget", "AfterDailyBudget", "BudgetChangeRate"],
+      header: [
+        "CampaignId",
+        "CampaignName",
+        "IsNew",
+        "IsRemoved",
+        "BeforeDailyBudget",
+        "AfterDailyBudget",
+        "BudgetChangeRate",
+      ],
       rows: result.budgetSimulation.campaignBudgetDiffs.map((item) => [
         item.campaignId,
         item.campaignName,
@@ -1076,9 +1085,7 @@ program
         console.table(
           entries.map((entry) => {
             const pattern = patternMap.get(entry.patternId);
-            const { reminder } = pattern
-              ? calcMeasureReminder(entry, pattern, now)
-              : { reminder: "" };
+            const { reminder } = pattern ? calcMeasureReminder(entry, pattern, now) : { reminder: "" };
             return {
               id: entry.id,
               date: entry.date,
@@ -1220,65 +1227,59 @@ program
   .option("--log-id <id>", "Measure log id")
   .option("--output <file>", "Output file path")
   .option("--format <type>", "console | json | markdown | xlsx", "markdown")
-  .action(
-    async (options: {
-      logId?: string;
-      output?: string;
-      format?: string;
-    }) => {
-      let targetLog: MeasureLogEntry | undefined;
-      if (options.logId) {
-        targetLog = await getMeasureLogById(options.logId);
+  .action(async (options: { logId?: string; output?: string; format?: string }) => {
+    let targetLog: MeasureLogEntry | undefined;
+    if (options.logId) {
+      targetLog = await getMeasureLogById(options.logId);
+    } else {
+      const entries = await listMeasureLogs();
+      targetLog = entries.find((entry) => entry.lastCompare);
+    }
+
+    if (!targetLog) {
+      throw new Error("No measure log found. specify --log-id or run measure-compare with --log-id first");
+    }
+    if (!targetLog.lastCompare) {
+      throw new Error(`No compare result saved for log: ${targetLog.id}`);
+    }
+
+    const compareResult = targetLog.lastCompare;
+    const format = toOutputFormat(options.format, "markdown");
+    const outputPath =
+      options.output ??
+      (format === "xlsx" ? path.resolve("output", `measure-report-${timestampForFilename()}.xlsx`) : undefined);
+
+    if (format === "json") {
+      const content = JSON.stringify(compareResult, null, 2);
+      if (outputPath) {
+        await writeTextFile(outputPath, content);
+        logger.info("Measure report JSON saved", { output: outputPath });
       } else {
-        const entries = await listMeasureLogs();
-        targetLog = entries.find((entry) => entry.lastCompare);
+        console.log(content);
       }
+      return;
+    }
 
-      if (!targetLog) {
-        throw new Error("No measure log found. specify --log-id or run measure-compare with --log-id first");
+    if (format === "markdown") {
+      const content = toMeasureCompareMarkdown(compareResult);
+      if (outputPath) {
+        await writeTextFile(outputPath, content);
+        logger.info("Measure report markdown saved", { output: outputPath });
+      } else {
+        console.log(content);
       }
-      if (!targetLog.lastCompare) {
-        throw new Error(`No compare result saved for log: ${targetLog.id}`);
-      }
+      return;
+    }
 
-      const compareResult = targetLog.lastCompare;
-      const format = toOutputFormat(options.format, "markdown");
-      const outputPath =
-        options.output ??
-        (format === "xlsx" ? path.resolve("output", `measure-report-${timestampForFilename()}.xlsx`) : undefined);
+    if (format === "xlsx" || (outputPath && outputPath.toLowerCase().endsWith(".xlsx"))) {
+      const target = outputPath ?? path.resolve("output", `measure-report-${timestampForFilename()}.xlsx`);
+      await writeMeasureCompareXlsx(target, compareResult);
+      logger.info("Measure report xlsx generated", { output: target });
+      return;
+    }
 
-      if (format === "json") {
-        const content = JSON.stringify(compareResult, null, 2);
-        if (outputPath) {
-          await writeTextFile(outputPath, content);
-          logger.info("Measure report JSON saved", { output: outputPath });
-        } else {
-          console.log(content);
-        }
-        return;
-      }
-
-      if (format === "markdown") {
-        const content = toMeasureCompareMarkdown(compareResult);
-        if (outputPath) {
-          await writeTextFile(outputPath, content);
-          logger.info("Measure report markdown saved", { output: outputPath });
-        } else {
-          console.log(content);
-        }
-        return;
-      }
-
-      if (format === "xlsx" || (outputPath && outputPath.toLowerCase().endsWith(".xlsx"))) {
-        const target = outputPath ?? path.resolve("output", `measure-report-${timestampForFilename()}.xlsx`);
-        await writeMeasureCompareXlsx(target, compareResult);
-        logger.info("Measure report xlsx generated", { output: target });
-        return;
-      }
-
-      printMeasureCompareConsole(compareResult);
-    },
-  );
+    printMeasureCompareConsole(compareResult);
+  });
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);

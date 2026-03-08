@@ -9,10 +9,7 @@ const getApiKey = (): string | undefined => {
   return key.trim();
 };
 
-export const buildMeasureAnalysisPrompt = (
-  result: MeasureCompareResult,
-  measureDescription?: string,
-): string => {
+export const buildMeasureAnalysisPrompt = (result: MeasureCompareResult, measureDescription?: string): string => {
   const compact = {
     generatedAt: result.generatedAt,
     pattern: {

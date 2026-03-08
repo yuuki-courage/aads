@@ -276,7 +276,9 @@ const compareByCampaign = (
   afterCampaigns: CampaignMetrics[],
   focusKpis: MeasureKpiKey[],
 ): MeasureCampaignDiff[] => {
-  const beforeMap = new Map(beforeCampaigns.map((campaign) => [campaign.campaignId || campaign.campaignName, campaign]));
+  const beforeMap = new Map(
+    beforeCampaigns.map((campaign) => [campaign.campaignId || campaign.campaignName, campaign]),
+  );
   const afterMap = new Map(afterCampaigns.map((campaign) => [campaign.campaignId || campaign.campaignName, campaign]));
   const keys = new Set<string>([...beforeMap.keys(), ...afterMap.keys()]);
 
@@ -408,10 +410,7 @@ export const removeMeasureLog = async (id: string): Promise<boolean> => {
   return true;
 };
 
-export const addNoteToMeasureLog = async (
-  id: string,
-  text: string,
-): Promise<MeasureLogEntry | undefined> => {
+export const addNoteToMeasureLog = async (id: string, text: string): Promise<MeasureLogEntry | undefined> => {
   const entries = await readMeasureLogRaw();
   const index = entries.findIndex((entry) => entry.id === id);
   if (index < 0) return undefined;
