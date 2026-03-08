@@ -19,6 +19,8 @@ Reads Amazon Ads bulk sheet exports (Excel/CSV) and generates actionable optimiz
 | `generate` | Generate Amazon Ads bulk sheet from analysis results |
 | `apply-actions` | Apply action items (negative KW, keyword, placement) from JSON config |
 | `create-campaign` | Generate campaign structure bulk sheet from template config |
+| `measure-log` | Track advertising measures with timestamped notes |
+| `measure-compare` | Compare before/after KPI snapshots for a measure |
 
 ## Installation
 
@@ -61,6 +63,16 @@ aads apply-actions --config actions.json --output actions.xlsx
 
 # Create new campaign structure from template
 aads create-campaign --config campaign.json --output campaign.xlsx
+
+# Track advertising measures
+aads measure-log --add --pattern custom --name "Negative KW cleanup" --date 2026-03-08
+aads measure-log --list
+
+# Add notes to a measure
+aads measure-log --id <entry-id> --note "ACOS improved 15% → 10%"
+
+# Compare before/after KPIs
+aads measure-compare --pattern custom --before "before-*.xlsx" --after "after-*.xlsx"
 ```
 
 ## Commands
@@ -201,6 +213,50 @@ Campaign and ad group names are customizable via `naming` in the config:
 ```
 
 See [`data/samples/campaign-template-sample.json`](data/samples/campaign-template-sample.json) for full config format.
+
+### `measure-log`
+
+Track advertising measures (campaign changes, optimizations) as a log with timestamped notes. Data is stored in `./data/measure-log.json` in your working directory.
+
+```bash
+aads measure-log --list [--format <type>] [--status <status>] [--pattern <id>]
+aads measure-log --add --pattern <id> --name <text> --date <yyyy-mm-dd> [--note <text>]
+aads measure-log --remove <id>
+aads measure-log --id <entry-id> --note <text>
+```
+
+| Option | Description |
+|--------|-------------|
+| `--list` | List all entries |
+| `--add` | Add a new entry |
+| `--remove <id>` | Remove an entry |
+| `--id <entry-id>` | Target entry ID (for `--note`) |
+| `--note <text>` | Add a note (standalone with `--id`, or initial note with `--add`) |
+| `--pattern <id>` | Measure pattern ID |
+| `--name <text>` | Measure name |
+| `--date <yyyy-mm-dd>` | Measure execution date |
+| `--status <status>` | `pending` \| `completed` |
+| `--format <type>` | `console` \| `json` \| `markdown` (default: `console`) |
+
+### `measure-compare`
+
+Compare before/after KPI snapshots for a measure to evaluate its effectiveness.
+
+```bash
+aads measure-compare --pattern <id> --before <pattern> --after <pattern> [options]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--pattern <id>` | Measure pattern ID |
+| `--log-id <id>` | Resolve pattern and metadata from measure-log entry |
+| `--before <pattern>` | Before input file path or wildcard (required) |
+| `--after <pattern>` | After input file path or wildcard (required) |
+| `--campaigns <list>` | Comma-separated campaign IDs or names to filter |
+| `--asins <list>` | Comma-separated ASINs to filter |
+| `--name <text>` | Measure name |
+| `--description <text>` | Measure description |
+| `--with-llm` | Run LLM analysis (requires API key) |
 
 ## Configuration
 

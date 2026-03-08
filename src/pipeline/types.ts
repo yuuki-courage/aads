@@ -201,6 +201,164 @@ export interface ActionItemsConfig {
   actions: ActionItem[];
 }
 
+// === measure types ===
+
+export type MeasureKpiKey =
+  | "impressions"
+  | "clicks"
+  | "spend"
+  | "sales"
+  | "orders"
+  | "ctr"
+  | "cvr"
+  | "acos"
+  | "roas"
+  | "cpc"
+  | "cpa";
+
+export type MeasureCriterionDirection = "increase" | "decrease" | "non-increase" | "non-decrease";
+export type MeasureVerdict = "improved" | "neutral" | "degraded";
+export type MeasureLogStatus = "pending" | "completed";
+
+export interface MeasureCriterion {
+  kpi: MeasureKpiKey;
+  direction: MeasureCriterionDirection;
+  threshold: number;
+  label: string;
+}
+
+export interface MeasurePattern {
+  id: string;
+  name: string;
+  description: string;
+  focusKpis: MeasureKpiKey[];
+  recommendedWindowDays: number;
+  criteria: MeasureCriterion[];
+  requiresLlm?: boolean;
+}
+
+export interface MeasureKpiSnapshot {
+  impressions: number;
+  clicks: number;
+  spend: number;
+  sales: number;
+  orders: number;
+  ctr: number;
+  cvr: number;
+  acos: number;
+  roas: number;
+  cpc: number;
+  cpa: number;
+  campaignCount: number;
+}
+
+export interface MeasureKpiDiff {
+  kpi: MeasureKpiKey;
+  before: number;
+  after: number;
+  diff: number;
+  changeRate: number;
+}
+
+export interface MeasureCriteriaEvaluation {
+  criterion: MeasureCriterion;
+  before: number;
+  after: number;
+  changeRate: number;
+  passed: boolean;
+}
+
+export interface MeasureCampaignDiff {
+  campaignId: string;
+  campaignName: string;
+  isNew: boolean;
+  isRemoved: boolean;
+  before: MeasureKpiSnapshot;
+  after: MeasureKpiSnapshot;
+  focusDiffs: MeasureKpiDiff[];
+}
+
+export interface MeasureCampaignBudgetDiff {
+  campaignId: string;
+  campaignName: string;
+  isNew: boolean;
+  isRemoved: boolean;
+  beforeDailyBudget: number;
+  afterDailyBudget: number;
+  budgetChangeRate: number;
+}
+
+export interface MeasureBudgetSimulation {
+  available: boolean;
+  beforeTotalDailyBudget: number;
+  afterTotalDailyBudget: number;
+  budgetChangeRate: number;
+  beforeRoas: number;
+  expectedDailySales: number;
+  actualDailySales: number;
+  expectedVsActualRate: number;
+  beforeDays: number;
+  afterDays: number;
+  campaignBudgetDiffs: MeasureCampaignBudgetDiff[];
+}
+
+export type HypothesisConfidence = "high" | "medium" | "low";
+
+export interface MeasureHypothesis {
+  id: string;
+  pattern: string;
+  hypothesis: string;
+  confidence: HypothesisConfidence;
+  suggestedAction: string;
+  suggestedMetrics: string[];
+}
+
+export interface MeasureCompareResult {
+  generatedAt: string;
+  patternId: string;
+  patternName: string;
+  logId?: string;
+  measureName?: string;
+  measureDescription?: string;
+  focusKpis: MeasureKpiKey[];
+  verdict: MeasureVerdict;
+  beforeInput: string;
+  afterInput: string;
+  beforeDateRange: { startDate: string; endDate: string; days: number } | null;
+  afterDateRange: { startDate: string; endDate: string; days: number } | null;
+  filters: {
+    campaigns: string[];
+    asins: string[];
+  };
+  overallBefore: MeasureKpiSnapshot;
+  overallAfter: MeasureKpiSnapshot;
+  overallDiffs: MeasureKpiDiff[];
+  focusDiffs: MeasureKpiDiff[];
+  criteriaEvaluations: MeasureCriteriaEvaluation[];
+  campaignDiffs: MeasureCampaignDiff[];
+  budgetSimulation?: MeasureBudgetSimulation;
+  hypotheses?: MeasureHypothesis[];
+  llmAnalysis?: string;
+}
+
+export interface MeasureLogNote {
+  text: string;
+  createdAt: string;
+}
+
+export interface MeasureLogEntry {
+  id: string;
+  patternId: string;
+  name: string;
+  date: string;
+  description?: string;
+  status: MeasureLogStatus;
+  createdAt: string;
+  updatedAt: string;
+  lastCompare?: MeasureCompareResult;
+  notes?: MeasureLogNote[];
+}
+
 export interface StrategyData {
   source: "none";
   targetAcos?: number;

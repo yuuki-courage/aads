@@ -8,6 +8,9 @@ dist/
 # Generated reports
 output/
 
+# User data (created by CLI at runtime)
+data/measure-log.json
+
 # Input data (bulk sheets, reports, CSVs)
 data/input/*
 !data/input/README.md

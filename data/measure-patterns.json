@@ -1,0 +1,119 @@
+[
+  {
+    "id": "auto-to-manual",
+    "name": "Auto→Manual併用",
+    "description": "オートキャンペーン主体からマニュアル併用へ拡張した施策の効果検証",
+    "focusKpis": ["acos", "roas", "cpc"],
+    "recommendedWindowDays": 14,
+    "criteria": [
+      {
+        "kpi": "acos",
+        "direction": "decrease",
+        "threshold": 0.05,
+        "label": "ACOS 5%改善"
+      },
+      {
+        "kpi": "roas",
+        "direction": "increase",
+        "threshold": 0.05,
+        "label": "ROAS 5%改善"
+      },
+      {
+        "kpi": "impressions",
+        "direction": "non-decrease",
+        "threshold": 0,
+        "label": "imp低下なし"
+      }
+    ]
+  },
+  {
+    "id": "sb-introduction",
+    "name": "SB/SBV広告導入",
+    "description": "スポンサーブランド/スポンサーブランド動画導入の効果検証",
+    "focusKpis": ["impressions", "clicks", "sales"],
+    "recommendedWindowDays": 30,
+    "criteria": [
+      {
+        "kpi": "impressions",
+        "direction": "increase",
+        "threshold": 0.1,
+        "label": "imp 10%増"
+      },
+      {
+        "kpi": "sales",
+        "direction": "increase",
+        "threshold": 0.05,
+        "label": "売上5%増"
+      },
+      {
+        "kpi": "acos",
+        "direction": "non-increase",
+        "threshold": 0.1,
+        "label": "ACOS悪化10%未満"
+      }
+    ]
+  },
+  {
+    "id": "lp-image-change",
+    "name": "LP画像差し替え",
+    "description": "商品LPのメイン/サブ画像差し替え施策の効果検証",
+    "focusKpis": ["ctr", "cvr"],
+    "recommendedWindowDays": 14,
+    "criteria": [
+      {
+        "kpi": "cvr",
+        "direction": "increase",
+        "threshold": 0.05,
+        "label": "CVR 5%改善"
+      },
+      {
+        "kpi": "ctr",
+        "direction": "non-decrease",
+        "threshold": 0,
+        "label": "CTR低下なし"
+      }
+    ]
+  },
+  {
+    "id": "revenue-growth",
+    "name": "売上拡大（予算追加型）",
+    "description": "広告予算の追加・キャンペーン拡張による売上拡大施策の効果検証。予算増加に伴うACOS悪化は許容範囲内とする",
+    "focusKpis": ["sales", "orders", "impressions", "roas"],
+    "recommendedWindowDays": 7,
+    "criteria": [
+      {
+        "kpi": "sales",
+        "direction": "increase",
+        "threshold": 0.1,
+        "label": "売上10%増"
+      },
+      {
+        "kpi": "orders",
+        "direction": "increase",
+        "threshold": 0.05,
+        "label": "注文数5%増"
+      },
+      {
+        "kpi": "impressions",
+        "direction": "increase",
+        "threshold": 0.1,
+        "label": "imp 10%増"
+      },
+      {
+        "kpi": "acos",
+        "direction": "non-increase",
+        "threshold": 0.2,
+        "label": "ACOS悪化20%未満"
+      }
+    ]
+  },
+  {
+    "id": "custom",
+    "name": "カスタム施策",
+    "description": "任意の施策定義に基づく効果検証（必要に応じてLLM分析を併用）",
+    "focusKpis": ["impressions", "clicks", "spend", "sales", "orders", "ctr", "cvr", "acos", "roas", "cpc"],
+    "recommendedWindowDays": 14,
+    "criteria": [],
+    "requiresLlm": true
+  }
+]
