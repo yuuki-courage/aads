@@ -456,3 +456,118 @@ aads create-campaign \
   --mode update \
   --input sc-bulk.xlsx
 ```
+
+---
+
+## `aads measure-log`
+
+Track advertising measures with timestamped notes. Data is stored in `./data/measure-log.json` in your working directory.
+
+### Usage
+
+```bash
+# List all entries
+aads measure-log --list [--format <type>] [--status <status>] [--pattern <id>]
+
+# Add a new entry
+aads measure-log --add --pattern <id> --name <text> --date <yyyy-mm-dd> [--note <text>]
+
+# Remove an entry
+aads measure-log --remove <id>
+
+# Add a note to an existing entry
+aads measure-log --id <entry-id> --note <text>
+```
+
+### Options
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--list` | No | List all entries (default if no action specified) |
+| `--add` | No | Add a new entry |
+| `--remove <id>` | No | Remove an entry by ID |
+| `--id <entry-id>` | For `--note` | Target entry ID |
+| `--note <text>` | No | Add a note (standalone with `--id`, or initial note with `--add`) |
+| `--pattern <id>` | With `--add` | Measure pattern ID |
+| `--name <text>` | With `--add` | Measure name |
+| `--date <yyyy-mm-dd>` | With `--add` | Measure execution date |
+| `--description <text>` | No | Measure description |
+| `--status <status>` | No | `pending` \| `completed` |
+| `--format <type>` | No | `console` (default) \| `json` \| `markdown` |
+
+### Output
+
+- **console**: Table with ID, date, pattern, name, status, notes count, reminder
+- **json**: Full entry objects including notes array
+- **markdown**: Markdown table with Notes column
+
+### Example
+
+```bash
+# List all measures
+aads measure-log --list
+
+# Add a measure with an initial note
+aads measure-log --add --pattern custom --name "Negative KW cleanup" --date 2026-03-08 --note "Removed 5 wasteful keywords"
+
+# Add a follow-up note
+aads measure-log --id abc123 --note "ACOS improved from 15% to 10%"
+
+# View as JSON (includes full notes array)
+aads measure-log --list --format json
+
+# Filter by status
+aads measure-log --list --status pending
+```
+
+---
+
+## `aads measure-compare`
+
+Compare before/after KPI snapshots for a measure to evaluate its effectiveness.
+
+### Usage
+
+```bash
+aads measure-compare --pattern <id> --before <pattern> --after <pattern> [options]
+```
+
+### Options
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pattern <id>` | Yes* | Measure pattern ID (*or use `--log-id`) |
+| `--log-id <id>` | No | Resolve pattern and metadata from measure-log entry |
+| `--before <pattern>` | Yes | Before input file path or wildcard |
+| `--after <pattern>` | Yes | After input file path or wildcard |
+| `--campaigns <list>` | No | Comma-separated campaign IDs or names to filter |
+| `--asins <list>` | No | Comma-separated ASINs to filter |
+| `--name <text>` | No | Measure name (for custom pattern) |
+| `--description <text>` | No | Measure description |
+| `--with-llm` | No | Run LLM analysis (requires API key, costs apply) |
+| `--format <type>` | No | `console` (default) \| `json` \| `xlsx` |
+| `--output <file>` | No | Output file path (for xlsx format) |
+
+### Output
+
+- Overall KPI comparison (before vs after)
+- Criteria evaluation (pass/fail per pattern criteria)
+- Per-campaign breakdown
+- Budget simulation (if budget data available)
+- Verdict: `improved`, `neutral`, or `degraded`
+
+### Example
+
+```bash
+# Compare with a specific pattern
+aads measure-compare --pattern revenue-growth --before "week1-*.xlsx" --after "week2-*.xlsx"
+
+# Compare using a measure-log entry
+aads measure-compare --log-id abc123 --before "before.xlsx" --after "after.xlsx"
+
+# Filter by campaigns
+aads measure-compare --pattern custom --before before.xlsx --after after.xlsx --campaigns "Campaign A,Campaign B"
+
+# Export to Excel
+aads measure-compare --pattern custom --before before.xlsx --after after.xlsx --format xlsx --output output/compare.xlsx
+```
