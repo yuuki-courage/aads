@@ -27,7 +27,7 @@ import type {
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 const CURRENT_DIR = path.dirname(CURRENT_FILE);
 const MEASURE_PATTERNS_PATH = path.resolve(CURRENT_DIR, "../../data/measure-patterns.json");
-const MEASURE_LOG_PATH = path.resolve(CURRENT_DIR, "../../data/measure-log.json");
+const MEASURE_LOG_PATH = path.resolve(process.cwd(), "data/measure-log.json");
 
 export const MEASURE_KPI_KEYS: MeasureKpiKey[] = [
   "impressions",
