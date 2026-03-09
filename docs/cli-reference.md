@@ -222,40 +222,40 @@ aads seo-report --input "bulk-*.xlsx" --ranking-db data/ranking.db --output seo.
 
 ## `aads generate`
 
-分析結果からAmazon Adsバルクシートを生成します。
+Generate Amazon Ads bulk sheets from analysis results.
 
-### 使用方法
+### Usage
 
 ```bash
 aads generate --input <pattern> --output <file> [--blocks <list>]
 ```
 
-### オプション
+### Options
 
-| オプション | 必須 | 説明 |
+| Option | Required | Description |
 |--------|----------|-------------|
-| `--input <pattern>` | Yes | 入力ファイルパスまたはワイルドカード |
-| `--output <file>` | Yes | 出力Excelファイルパス |
-| `--blocks <list>` | No | 実行するブロック番号（カンマ区切り: 1,2,3,3.5,4,5） |
+| `--input <pattern>` | Yes | Input file path or wildcard |
+| `--output <file>` | Yes | Output Excel (.xlsx) file path |
+| `--blocks <list>` | No | Block numbers to execute (comma-separated: 1,2,3,3.5,4,5) |
 
-### ブロック一覧
+### Blocks
 
-| ブロック | 内容 |
-|---------|------|
-| 1 | 予算更新 |
-| 2 | CPC入札更新 |
-| 3 | Auto→Manual昇格キーワード作成 |
-| 3.5 | 昇格キーワードのネガティブ同期 |
-| 4 | ネガティブキーワード作成 |
-| 5 | プレースメント入札調整 |
+| Block | Description |
+|-------|-------------|
+| 1 | Budget update |
+| 2 | CPC bid update |
+| 3 | Auto→Manual keyword promotion |
+| 3.5 | Negative keyword sync for promoted keywords |
+| 4 | Negative keyword creation |
+| 5 | Placement bid adjustment |
 
-### 実行例
+### Example
 
 ```bash
-# 全ブロック実行
+# Run all blocks
 aads generate --input "bulk-*.xlsx" --output output/bulk.xlsx
 
-# 特定ブロックのみ
+# Run specific blocks only
 aads generate --input bulk.xlsx --output output/bulk.xlsx --blocks 2,5
 ```
 
@@ -263,26 +263,26 @@ aads generate --input bulk.xlsx --output output/bulk.xlsx --blocks 2,5
 
 ## `aads apply-actions`
 
-施策アクション（ネガティブKW追加、キーワード追加、プレースメント調整等）をJSON設定からバルクシートに変換します。
+Convert action items (negative keywords, keyword additions, placement adjustments, etc.) from a JSON config into a bulk sheet.
 
-### 使用方法
+### Usage
 
 ```bash
 aads apply-actions --config <file> --output <file>
 ```
 
-### オプション
+### Options
 
-| オプション | 必須 | 説明 |
+| Option | Required | Description |
 |--------|----------|-------------|
-| `--config <file>` | Yes | アクションアイテム設定JSONファイルパス |
-| `--output <file>` | Yes | 出力Excelファイルパス |
+| `--config <file>` | Yes | Action items JSON config file path |
+| `--output <file>` | Yes | Output Excel (.xlsx) file path |
 
-### 設定JSONフォーマット
+### Config JSON Format
 
 ```json
 {
-  "description": "施策の説明（任意）",
+  "description": "Optional description of the action set",
   "actions": [
     {
       "type": "negative_keyword",
@@ -320,16 +320,16 @@ aads apply-actions --config <file> --output <file>
 }
 ```
 
-### アクションタイプ
+### Action Types
 
-| タイプ | Entity | 説明 |
-|--------|--------|------|
-| `negative_keyword` | Negative Keyword / Campaign Negative Keyword | ネガティブKW追加。adGroupIdがあれば広告グループレベル、なければキャンペーンレベル |
-| `negative_product_targeting` | Negative Product Targeting | ネガティブ商品ターゲティング追加 |
-| `keyword` | Keyword | キーワード追加（入札額指定可） |
-| `placement` | Campaign | プレースメント入札調整 |
+| Type | Entity | Description |
+|------|--------|-------------|
+| `negative_keyword` | Negative Keyword / Campaign Negative Keyword | Add negative keyword. Ad group level if adGroupId is provided, campaign level otherwise |
+| `negative_product_targeting` | Negative Product Targeting | Add negative product targeting |
+| `keyword` | Keyword | Add keyword (with optional bid) |
+| `placement` | Campaign | Placement bid adjustment |
 
-### 実行例
+### Example
 
 ```bash
 aads apply-actions --config data/samples/action-items-sample.json --output output/actions.xlsx
@@ -339,22 +339,22 @@ aads apply-actions --config data/samples/action-items-sample.json --output outpu
 
 ## `aads create-campaign`
 
-キャンペーン構造をJSON設定からバルクシートに変換します。新規作成（create）と既存更新（update）の2モードをサポート。
+Convert campaign structure from a JSON config into a bulk sheet. Supports two modes: create (new campaigns) and update (existing campaigns).
 
-### 使用方法
+### Usage
 
 ```bash
 aads create-campaign --config <file> --output <file> [--mode <create|update>] [--input <file>]
 ```
 
-### オプション
+### Options
 
-| オプション | 必須 | 説明 |
+| Option | Required | Description |
 |--------|----------|-------------|
-| `--config <file>` | Yes | キャンペーンテンプレート設定JSONファイルパス |
-| `--output <file>` | Yes | 出力Excelファイルパス |
-| `--mode <mode>` | No | `create`（デフォルト）または `update` |
-| `--input <file>` | updateモード時必須 | SCバルクシートパス（ID解決用） |
+| `--config <file>` | Yes | Campaign template JSON config file path |
+| `--output <file>` | Yes | Output Excel (.xlsx) file path |
+| `--mode <mode>` | No | `create` (default) or `update` |
+| `--input <file>` | For update mode | SC bulk sheet path (for ID resolution) |
 
 ### 設定JSONフォーマット
 
@@ -424,32 +424,32 @@ aads create-campaign --config <file> --output <file> [--mode <create|update>] [-
 }
 ```
 
-### キャンペーンタイプ
+### Campaign Types
 
-| タイプ | ターゲティング | 説明 |
-|--------|--------------|------|
-| `auto` | auto | 自動ターゲティング。キーワード不要 |
-| `phrase` | manual | フレーズ一致キーワード |
-| `broad` | manual | 部分一致キーワード |
-| `asin` | manual | 商品ターゲティング（ASIN指定） |
-| `manual` | 設定による | 自由定義のキャンペーン構造 |
+| Type | Targeting | Description |
+|------|-----------|-------------|
+| `auto` | auto | Automatic targeting. No keywords required |
+| `phrase` | manual | Phrase match keywords |
+| `broad` | manual | Broad match keywords |
+| `asin` | manual | Product targeting (ASIN-based) |
+| `manual` | configurable | Freely defined campaign structure |
 
-### 命名規則（NamingConvention）
+### Naming Convention
 
-| フィールド | デフォルト | プレースホルダー |
-|-----------|-----------|----------------|
+| Field | Default | Placeholders |
+|-------|---------|--------------|
 | `campaignTemplate` | `{brand}_{typeLabel}_{suffix}` | `{brand}`, `{code}`, `{typeLabel}`, `{suffix}` |
 | `adGroupTemplate` | `{code}_{descriptor}` | `{brand}`, `{code}`, `{descriptor}` |
 
-### 実行例
+### Example
 
 ```bash
-# 新規キャンペーン作成
+# Create new campaigns
 aads create-campaign \
   --config data/samples/campaign-template-sample.json \
   --output output/campaign.xlsx
 
-# 既存キャンペーン更新（SCバルクシート参照）
+# Update existing campaigns (referencing SC bulk sheet)
 aads create-campaign \
   --config campaign.json \
   --output output/update.xlsx \
