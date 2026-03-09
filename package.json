@@ -1,6 +1,6 @@
 {
   "name": "aads-cli",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": false,
   "type": "module",
   "description": "CLI tool for analyzing Amazon Ads Sponsored Products campaign performance",
@@ -16,11 +16,11 @@
   "author": "yuuki-courage",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yuuki-courage/aads.git"
+    "url": "git+https://github.com/yuuki-courage/aads.git"
   },
   "bin": {
-    "aads": "./dist/cli.js",
-    "aads-cli": "./dist/cli.js"
+    "aads": "dist/cli.js",
+    "aads-cli": "dist/cli.js"
   },
   "files": [
     "dist/",
