@@ -27,6 +27,7 @@ import {
   loadMeasurePatterns,
   removeMeasureLog,
   saveMeasureCompareToLog,
+  updateMeasureLog,
 } from "./analysis/measure-effect.js";
 import { runMeasureLlmAnalysis } from "./research/measure-llm.js";
 import type {
@@ -564,7 +565,7 @@ const parseCsvList = (value?: string): string[] => {
 const toMeasureLogStatus = (value?: string): MeasureLogStatus | undefined => {
   if (!value) return undefined;
   const raw = value.trim().toLowerCase();
-  if (raw === "pending" || raw === "completed") return raw;
+  if (raw === "pending" || raw === "monitoring" || raw === "completed" || raw === "archived") return raw;
   return undefined;
 };
 
@@ -965,19 +966,23 @@ program
   .description("Manage measure execution logs")
   .option("--list", "List entries")
   .option("--add", "Add an entry")
+  .option("--update <id>", "Update an entry by id")
   .option("--remove <id>", "Remove an entry by id")
   .option("--pattern <id>", "Measure pattern id")
   .option("--name <text>", "Measure name")
   .option("--date <yyyy-mm-dd>", "Measure execution date")
   .option("--description <text>", "Measure description")
-  .option("--status <status>", "pending | completed")
+  .option("--status <status>", "pending | monitoring | completed | archived")
   .option("--id <entry-id>", "Target entry ID (for --note)")
   .option("--note <text>", "Add a note (standalone: requires --id; with --add: initial note)")
+  .option("--from <yyyy-mm-dd>", "Filter: entries on or after this date")
+  .option("--to <yyyy-mm-dd>", "Filter: entries on or before this date")
   .option("--format <type>", "console | json | markdown", "console")
   .action(
     async (options: {
       list?: boolean;
       add?: boolean;
+      update?: string;
       remove?: string;
       pattern?: string;
       name?: string;
@@ -986,12 +991,14 @@ program
       status?: string;
       id?: string;
       note?: string;
+      from?: string;
+      to?: string;
       format?: string;
     }) => {
       const format = toOutputFormat(options.format, "console");
       const status = toMeasureLogStatus(options.status);
       if (options.status && !status) {
-        throw new Error(`Invalid status: ${options.status}. expected pending | completed`);
+        throw new Error(`Invalid status: ${options.status}. expected pending | monitoring | completed | archived`);
       }
 
       if (options.note && !options.add && !options.remove) {
@@ -1051,6 +1058,34 @@ program
         return;
       }
 
+      if (options.update) {
+        const entry = await updateMeasureLog({
+          id: options.update,
+          name: options.name,
+          date: options.date,
+          description: options.description,
+          status,
+        });
+
+        if (format === "json") {
+          console.log(JSON.stringify(entry, null, 2));
+          return;
+        }
+
+        const pattern = await getMeasurePatternById(entry.patternId);
+        const { reminder } = pattern
+          ? calcMeasureReminder(entry, pattern)
+          : { reminder: "" };
+        logger.info("Measure log updated", {
+          id: entry.id,
+          name: entry.name,
+          date: entry.date,
+          status: entry.status,
+          reminder,
+        });
+        return;
+      }
+
       if (options.remove) {
         const removed = await removeMeasureLog(options.remove);
         if (!removed) {
@@ -1060,9 +1095,9 @@ program
         return;
       }
 
-      if (options.list || (!options.add && !options.remove)) {
+      if (options.list || (!options.add && !options.remove && !options.update)) {
         const [entries, patterns] = await Promise.all([
-          listMeasureLogs({ status, patternId: options.pattern }),
+          listMeasureLogs({ status, patternId: options.pattern, from: options.from, to: options.to }),
           loadMeasurePatterns(),
         ]);
         const patternMap = new Map(patterns.map((p) => [p.id, p]));
