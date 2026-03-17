@@ -87,6 +87,16 @@ describe("generateCpcRecommendations", () => {
     expect(result[0].currentBid).toBe(50); // 500/10 = 50
   });
 
+  it("skips records without keywordId", () => {
+    const records = [makeRecord({ keywordId: "", clicks: 10 })];
+    const result = generateCpcRecommendations(records, [], {
+      minClicks: 5,
+      targetAcos: 0.25,
+    });
+
+    expect(result).toHaveLength(0);
+  });
+
   it("ensures minimum bid of 1", () => {
     const records = [makeRecord({ clicks: 100, spend: 100, sales: 100000, bid: 1 })];
     const result = generateCpcRecommendations(records, [], {

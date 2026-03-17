@@ -1,8 +1,16 @@
 import { buildBulkRow } from "./row-builders.js";
 import type { BulkOutputRow, CpcRecommendation } from "../pipeline/types.js";
 
-export const generateCpcRows = (recommendations: CpcRecommendation[]): BulkOutputRow[] =>
-  recommendations.map((rec) =>
+export const generateCpcRows = (recommendations: CpcRecommendation[]): BulkOutputRow[] => {
+  for (const rec of recommendations) {
+    if (!rec.keywordId) {
+      throw new Error(
+        `Keyword ID is required for CPC update (SC rejects without it). ` +
+          `Keyword: "${rec.keywordText}" in ${rec.campaignName}`,
+      );
+    }
+  }
+  return recommendations.map((rec) =>
     buildBulkRow({
       Entity: "Keyword",
       Operation: "Update",
@@ -17,3 +25,4 @@ export const generateCpcRows = (recommendations: CpcRecommendation[]): BulkOutpu
       State: "enabled",
     }),
   );
+};

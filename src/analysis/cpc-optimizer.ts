@@ -22,6 +22,7 @@ export const generateCpcRecommendations = (
   const result: CpcRecommendation[] = [];
   for (const record of records) {
     if (!record.keywordText && !record.productTargetingExpression) continue;
+    if (!record.keywordId) continue; // SC rejects Keyword update without Keyword ID
     if (record.clicks < options.minClicks) continue;
 
     const avgCpc = safeDivide(record.spend, record.clicks);
