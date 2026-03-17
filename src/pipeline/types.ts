@@ -218,7 +218,7 @@ export type MeasureKpiKey =
 
 export type MeasureCriterionDirection = "increase" | "decrease" | "non-increase" | "non-decrease";
 export type MeasureVerdict = "improved" | "neutral" | "degraded";
-export type MeasureLogStatus = "pending" | "completed";
+export type MeasureLogStatus = "pending" | "monitoring" | "completed" | "archived";
 
 export interface MeasureCriterion {
   kpi: MeasureKpiKey;
@@ -355,6 +355,7 @@ export interface MeasureLogEntry {
   status: MeasureLogStatus;
   createdAt: string;
   updatedAt: string;
+  actionConfigPath?: string;
   lastCompare?: MeasureCompareResult;
   notes?: MeasureLogNote[];
 }

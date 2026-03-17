@@ -60,6 +60,8 @@ export const MEASURE_KPI_LABELS: Record<MeasureKpiKey, string> = {
 export interface ListMeasureLogOptions {
   status?: MeasureLogStatus;
   patternId?: string;
+  from?: string;
+  to?: string;
 }
 
 export interface AddMeasureLogInput {
@@ -69,6 +71,17 @@ export interface AddMeasureLogInput {
   description?: string;
   status?: MeasureLogStatus;
   note?: string;
+  actionConfigPath?: string;
+}
+
+export interface UpdateMeasureLogInput {
+  id: string;
+  name?: string;
+  date?: string;
+  description?: string;
+  status?: MeasureLogStatus;
+  note?: string;
+  actionConfigPath?: string;
 }
 
 export interface MeasureRecordFilters {
@@ -128,8 +141,15 @@ const readMeasureLogRaw = async (): Promise<MeasureLogEntry[]> => {
   }
 };
 
+const MEASURE_LOG_BACKUP_PATH = `${MEASURE_LOG_PATH}.bak`;
+
 const writeMeasureLogRaw = async (entries: MeasureLogEntry[]): Promise<void> => {
   await fs.mkdir(path.dirname(MEASURE_LOG_PATH), { recursive: true });
+  try {
+    await fs.copyFile(MEASURE_LOG_PATH, MEASURE_LOG_BACKUP_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   await fs.writeFile(MEASURE_LOG_PATH, `${JSON.stringify(entries, null, 2)}\n`, "utf8");
 };
 
@@ -371,6 +391,8 @@ export const listMeasureLogs = async (options?: ListMeasureLogOptions): Promise<
     .filter((entry) => {
       if (options?.status && entry.status !== options.status) return false;
       if (options?.patternId && entry.patternId !== options.patternId) return false;
+      if (options?.from && entry.date < options.from) return false;
+      if (options?.to && entry.date > options.to) return false;
       return true;
     })
     .sort(sortByDateDesc);
@@ -393,11 +415,52 @@ export const addMeasureLog = async (input: AddMeasureLogInput): Promise<MeasureL
     status: input.status ?? "pending",
     createdAt: now,
     updatedAt: now,
+    ...(input.actionConfigPath ? { actionConfigPath: input.actionConfigPath } : {}),
     ...(input.note ? { notes: [{ text: input.note.trim(), createdAt: now }] } : {}),
   };
 
   const entries = await readMeasureLogRaw();
   entries.push(entry);
+  await writeMeasureLogRaw(entries);
+  return entry;
+};
+
+// Allowed status transitions: pending → monitoring → completed → archived
+// Backward transitions (e.g. completed → pending) are rejected.
+const MEASURE_STATUS_ORDER: Record<MeasureLogStatus, number> = {
+  pending: 0,
+  monitoring: 1,
+  completed: 2,
+  archived: 3,
+};
+
+const validateStatusTransition = (from: MeasureLogStatus, to: MeasureLogStatus): void => {
+  if (MEASURE_STATUS_ORDER[to] < MEASURE_STATUS_ORDER[from]) {
+    throw new Error(`Invalid status transition: ${from} → ${to}. Status can only move forward.`);
+  }
+};
+
+export const updateMeasureLog = async (input: UpdateMeasureLogInput): Promise<MeasureLogEntry> => {
+  const entries = await readMeasureLogRaw();
+  const entry = entries.find((e) => e.id === input.id);
+  if (!entry) throw new Error(`Measure log not found: ${input.id}`);
+
+  if (input.name !== undefined) entry.name = input.name.trim();
+  if (input.date !== undefined) entry.date = parseDateOrThrow(input.date);
+  if (input.description !== undefined) entry.description = input.description.trim() || undefined;
+  if (input.status !== undefined) {
+    validateStatusTransition(entry.status, input.status);
+    entry.status = input.status;
+  }
+  if (input.actionConfigPath !== undefined) entry.actionConfigPath = input.actionConfigPath || undefined;
+
+  const now = new Date().toISOString();
+  if (input.note) {
+    const note: MeasureLogNote = { text: input.note.trim(), createdAt: now };
+    entry.notes = [...(entry.notes ?? []), note];
+  }
+  entry.updatedAt = now;
+
   await writeMeasureLogRaw(entries);
   return entry;
 };
@@ -522,8 +585,9 @@ export const calcMeasureReminder = (
   const daysElapsed = Math.floor((today.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
   const windowDays = pattern.recommendedWindowDays;
 
-  if (entry.status === "completed") return { daysElapsed, reminder: "" };
+  if (entry.status === "completed" || entry.status === "archived") return { daysElapsed, reminder: "" };
   if (entry.lastCompare) return { daysElapsed, reminder: "" };
+  if (entry.status === "monitoring") return { daysElapsed, reminder: `観察中（${daysElapsed}日経過）` };
   if (daysElapsed >= windowDays) return { daysElapsed, reminder: `比較推奨（${daysElapsed}日経過）` };
   const remaining = windowDays - daysElapsed;
   return { daysElapsed, reminder: `${remaining}日後` };
