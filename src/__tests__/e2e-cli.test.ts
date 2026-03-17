@@ -605,7 +605,7 @@ describe("E2E: measure-log", () => {
     ]);
 
     const { output } = await runCli(
-      ["measure-log", "--update", "test-id-1", "--status", "monitoring", "--name", "Updated Name"],
+      ["measure-log", "--update", "test-id-1", "--status", "monitoring", "--name", "UpdatedName"],
       { cwd: measureDir },
     );
     expect(output).toContain("Measure log updated");
@@ -613,7 +613,7 @@ describe("E2E: measure-log", () => {
 
     const entries = await readLog();
     expect(entries).toHaveLength(1);
-    expect(entries[0].name).toBe("Updated Name");
+    expect(entries[0].name).toBe("UpdatedName");
     expect(entries[0].status).toBe("monitoring");
   });
 
@@ -726,7 +726,7 @@ describe("E2E: measure-log", () => {
         "--update",
         "upd-note",
         "--note",
-        "observation note",
+        "observation-note",
         "--action-config",
         "configs/test.json",
         "--format",
@@ -736,7 +736,7 @@ describe("E2E: measure-log", () => {
     );
     const entry = JSON.parse(stdout) as { notes: { text: string }[]; actionConfigPath: string };
     expect(entry.notes).toHaveLength(1);
-    expect(entry.notes[0].text).toBe("observation note");
+    expect(entry.notes[0].text).toBe("observation-note");
     expect(entry.actionConfigPath).toBe("configs/test.json");
   });
 
