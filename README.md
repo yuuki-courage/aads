@@ -19,7 +19,7 @@ Reads Amazon Ads bulk sheet exports (Excel/CSV) and generates actionable optimiz
 | `generate` | Generate Amazon Ads bulk sheet from analysis results |
 | `apply-actions` | Apply action items (negative KW, keyword, placement) from JSON config |
 | `create-campaign` | Generate campaign structure bulk sheet from template config |
-| `measure-log` | Track advertising measures with timestamped notes |
+| `measure-log` | Track advertising measures with status lifecycle and timestamped notes |
 | `measure-compare` | Compare before/after KPI snapshots for a measure |
 
 ## Installation
@@ -68,8 +68,12 @@ aads create-campaign --config campaign.json --output campaign.xlsx
 aads measure-log --add --pattern custom --name "Negative KW cleanup" --date 2026-03-08
 aads measure-log --list
 
-# Add notes to a measure
-aads measure-log --id <entry-id> --note "ACOS improved 15% → 10%"
+# Update status and add notes
+aads measure-log --update <entry-id> --status monitoring --note "Observing ACOS trend"
+aads measure-log --update <entry-id> --status completed
+
+# Filter by date range
+aads measure-log --list --from 2026-03-01 --to 2026-03-31
 
 # Compare before/after KPIs
 aads measure-compare --pattern custom --before "before-*.xlsx" --after "after-*.xlsx"
@@ -216,11 +220,12 @@ See [`data/samples/campaign-template-sample.json`](data/samples/campaign-templat
 
 ### `measure-log`
 
-Track advertising measures (campaign changes, optimizations) as a log with timestamped notes. Data is stored in `./data/measure-log.json` in your working directory.
+Track advertising measures (campaign changes, optimizations) as a log with timestamped notes. Data is stored in `./data/measure-log.json` in your working directory. A `.bak` backup is created before each write.
 
 ```bash
-aads measure-log --list [--format <type>] [--status <status>] [--pattern <id>]
-aads measure-log --add --pattern <id> --name <text> --date <yyyy-mm-dd> [--note <text>]
+aads measure-log --list [--format <type>] [--status <status>] [--from <date>] [--to <date>]
+aads measure-log --add --pattern <id> --name <text> --date <yyyy-mm-dd> [--note <text>] [--action-config <path>]
+aads measure-log --update <id> [--status <status>] [--name <text>] [--note <text>] [--action-config <path>]
 aads measure-log --remove <id>
 aads measure-log --id <entry-id> --note <text>
 ```
@@ -229,14 +234,20 @@ aads measure-log --id <entry-id> --note <text>
 |--------|-------------|
 | `--list` | List all entries |
 | `--add` | Add a new entry |
+| `--update <id>` | Update an existing entry |
 | `--remove <id>` | Remove an entry |
-| `--id <entry-id>` | Target entry ID (for `--note`) |
-| `--note <text>` | Add a note (standalone with `--id`, or initial note with `--add`) |
+| `--id <entry-id>` | Target entry ID (for standalone `--note`) |
+| `--note <text>` | Add a note (with `--id`, `--add`, or `--update`) |
+| `--action-config <path>` | Action config JSON path for traceability (with `--add` or `--update`) |
 | `--pattern <id>` | Measure pattern ID |
 | `--name <text>` | Measure name |
 | `--date <yyyy-mm-dd>` | Measure execution date |
-| `--status <status>` | `pending` \| `completed` |
+| `--status <status>` | `pending` \| `monitoring` \| `completed` \| `archived` |
+| `--from <yyyy-mm-dd>` | Filter: entries on or after this date |
+| `--to <yyyy-mm-dd>` | Filter: entries on or before this date |
 | `--format <type>` | `console` \| `json` \| `markdown` (default: `console`) |
+
+**Status lifecycle:** `pending` → `monitoring` → `completed` → `archived` (forward-only, backward transitions are rejected)
 
 ### `measure-compare`
 
