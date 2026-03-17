@@ -974,7 +974,8 @@ program
   .option("--description <text>", "Measure description")
   .option("--status <status>", "pending | monitoring | completed | archived")
   .option("--id <entry-id>", "Target entry ID (for --note)")
-  .option("--note <text>", "Add a note (standalone: requires --id; with --add: initial note)")
+  .option("--note <text>", "Add a note (standalone: requires --id; with --add/--update)")
+  .option("--action-config <path>", "Action config JSON path (with --add/--update)")
   .option("--from <yyyy-mm-dd>", "Filter: entries on or after this date")
   .option("--to <yyyy-mm-dd>", "Filter: entries on or before this date")
   .option("--format <type>", "console | json | markdown", "console")
@@ -991,6 +992,7 @@ program
       status?: string;
       id?: string;
       note?: string;
+      actionConfig?: string;
       from?: string;
       to?: string;
       format?: string;
@@ -1001,7 +1003,15 @@ program
         throw new Error(`Invalid status: ${options.status}. expected pending | monitoring | completed | archived`);
       }
 
-      if (options.note && !options.add && !options.remove) {
+      const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+      if (options.from && !dateRe.test(options.from)) {
+        throw new Error(`Invalid --from date format: ${options.from}. expected YYYY-MM-DD`);
+      }
+      if (options.to && !dateRe.test(options.to)) {
+        throw new Error(`Invalid --to date format: ${options.to}. expected YYYY-MM-DD`);
+      }
+
+      if (options.note && !options.add && !options.update && !options.remove) {
         if (!options.id) throw new Error("--id is required with --note");
         const updated = await addNoteToMeasureLog(options.id, options.note);
         if (!updated) throw new Error(`Measure log not found: ${options.id}`);
@@ -1034,6 +1044,7 @@ program
           description: options.description,
           status,
           note: options.note,
+          actionConfigPath: options.actionConfig,
         });
 
         if (format === "json") {
@@ -1065,6 +1076,8 @@ program
           date: options.date,
           description: options.description,
           status,
+          note: options.note,
+          actionConfigPath: options.actionConfig,
         });
 
         if (format === "json") {
@@ -1073,9 +1086,7 @@ program
         }
 
         const pattern = await getMeasurePatternById(entry.patternId);
-        const { reminder } = pattern
-          ? calcMeasureReminder(entry, pattern)
-          : { reminder: "" };
+        const { reminder } = pattern ? calcMeasureReminder(entry, pattern) : { reminder: "" };
         logger.info("Measure log updated", {
           id: entry.id,
           name: entry.name,

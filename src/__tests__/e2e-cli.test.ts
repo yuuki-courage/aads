@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -17,13 +17,14 @@ let tmpDir: string;
 
 const runCli = async (
   args: string[],
-  opts?: { expectFail?: boolean },
+  opts?: { expectFail?: boolean; cwd?: string },
 ): Promise<{ stdout: string; stderr: string; output: string; exitCode: number }> => {
   try {
     const { stdout, stderr } = await exec(TSX, [CLI_PATH, ...args], {
       env: { ...process.env, LOG_LEVEL: "info" },
       timeout: 30_000,
       shell: IS_WIN,
+      cwd: opts?.cwd,
     });
     return { stdout, stderr, output: stdout + stderr, exitCode: 0 };
   } catch (err: unknown) {
@@ -562,6 +563,223 @@ describe("E2E: create-campaign", () => {
         expect(campaignId).toBe(campaignName);
       }
     }
+  });
+});
+
+// ── measure-log E2E ──
+
+describe("E2E: measure-log", () => {
+  let measureDir: string;
+
+  beforeEach(async () => {
+    measureDir = await mkdtemp(path.join(os.tmpdir(), "aads-measure-"));
+    await mkdir(path.join(measureDir, "data"), { recursive: true });
+  });
+
+  afterAll(async () => {
+    if (measureDir && existsSync(measureDir)) {
+      await rm(measureDir, { recursive: true, force: true });
+    }
+  });
+
+  const seedLog = async (entries: Record<string, unknown>[]) => {
+    await writeFile(path.join(measureDir, "data/measure-log.json"), JSON.stringify(entries, null, 2), "utf8");
+  };
+
+  const readLog = async (): Promise<Record<string, unknown>[]> => {
+    const raw = await readFile(path.join(measureDir, "data/measure-log.json"), "utf8");
+    return JSON.parse(raw) as Record<string, unknown>[];
+  };
+
+  it("updates an existing measure log entry", async () => {
+    await seedLog([
+      {
+        id: "test-id-1",
+        patternId: "budget-change",
+        name: "Original Name",
+        date: "2026-03-01",
+        status: "pending",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+      },
+    ]);
+
+    const { output } = await runCli(
+      ["measure-log", "--update", "test-id-1", "--status", "monitoring", "--name", "Updated Name"],
+      { cwd: measureDir },
+    );
+    expect(output).toContain("Measure log updated");
+    expect(output).toContain("monitoring");
+
+    const entries = await readLog();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].name).toBe("Updated Name");
+    expect(entries[0].status).toBe("monitoring");
+  });
+
+  it("update fails for non-existent id", async () => {
+    await seedLog([]);
+
+    const { output, exitCode } = await runCli(["measure-log", "--update", "no-such-id", "--status", "completed"], {
+      expectFail: true,
+      cwd: measureDir,
+    });
+    expect(exitCode).not.toBe(0);
+    expect(output).toContain("Measure log not found");
+  });
+
+  it("filters entries by --from and --to date range", async () => {
+    await seedLog([
+      {
+        id: "a",
+        patternId: "budget-change",
+        name: "Jan",
+        date: "2026-01-15",
+        status: "completed",
+        createdAt: "2026-01-15T00:00:00.000Z",
+        updatedAt: "2026-01-15T00:00:00.000Z",
+      },
+      {
+        id: "b",
+        patternId: "budget-change",
+        name: "Feb",
+        date: "2026-02-15",
+        status: "pending",
+        createdAt: "2026-02-15T00:00:00.000Z",
+        updatedAt: "2026-02-15T00:00:00.000Z",
+      },
+      {
+        id: "c",
+        patternId: "budget-change",
+        name: "Mar",
+        date: "2026-03-15",
+        status: "pending",
+        createdAt: "2026-03-15T00:00:00.000Z",
+        updatedAt: "2026-03-15T00:00:00.000Z",
+      },
+    ]);
+
+    const { stdout } = await runCli(
+      ["measure-log", "--list", "--from", "2026-02-01", "--to", "2026-02-28", "--format", "json"],
+      { cwd: measureDir },
+    );
+    const result = JSON.parse(stdout) as { id: string }[];
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("b");
+  });
+
+  it("rejects invalid --from date format", async () => {
+    const { output, exitCode } = await runCli(["measure-log", "--list", "--from", "2026/03/01"], {
+      expectFail: true,
+      cwd: measureDir,
+    });
+    expect(exitCode).not.toBe(0);
+    expect(output).toContain("Invalid --from date format");
+  });
+
+  it("rejects invalid --to date format", async () => {
+    const { output, exitCode } = await runCli(["measure-log", "--list", "--to", "March"], {
+      expectFail: true,
+      cwd: measureDir,
+    });
+    expect(exitCode).not.toBe(0);
+    expect(output).toContain("Invalid --to date format");
+  });
+
+  it("creates .bak backup before writing", async () => {
+    await seedLog([
+      {
+        id: "bak-test",
+        patternId: "budget-change",
+        name: "Backup Test",
+        date: "2026-03-01",
+        status: "pending",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+      },
+    ]);
+
+    await runCli(["measure-log", "--update", "bak-test", "--status", "completed"], { cwd: measureDir });
+
+    const bakPath = path.join(measureDir, "data/measure-log.json.bak");
+    expect(existsSync(bakPath)).toBe(true);
+    const bakContent = JSON.parse(await readFile(bakPath, "utf8")) as { status: string }[];
+    expect(bakContent[0].status).toBe("pending"); // backup has old state
+  });
+
+  it("adds note and actionConfigPath via --update", async () => {
+    await seedLog([
+      {
+        id: "upd-note",
+        patternId: "budget-change",
+        name: "Note Test",
+        date: "2026-03-01",
+        status: "pending",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+      },
+    ]);
+
+    const { stdout } = await runCli(
+      [
+        "measure-log",
+        "--update",
+        "upd-note",
+        "--note",
+        "observation note",
+        "--action-config",
+        "configs/test.json",
+        "--format",
+        "json",
+      ],
+      { cwd: measureDir },
+    );
+    const entry = JSON.parse(stdout) as { notes: { text: string }[]; actionConfigPath: string };
+    expect(entry.notes).toHaveLength(1);
+    expect(entry.notes[0].text).toBe("observation note");
+    expect(entry.actionConfigPath).toBe("configs/test.json");
+  });
+
+  it("rejects backward status transition", async () => {
+    await seedLog([
+      {
+        id: "trans-test",
+        patternId: "budget-change",
+        name: "Transition Test",
+        date: "2026-03-01",
+        status: "completed",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+      },
+    ]);
+
+    const { output, exitCode } = await runCli(["measure-log", "--update", "trans-test", "--status", "pending"], {
+      expectFail: true,
+      cwd: measureDir,
+    });
+    expect(exitCode).not.toBe(0);
+    expect(output).toContain("Invalid status transition");
+  });
+
+  it("allows forward status transition", async () => {
+    await seedLog([
+      {
+        id: "fwd-test",
+        patternId: "budget-change",
+        name: "Forward Test",
+        date: "2026-03-01",
+        status: "pending",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+      },
+    ]);
+
+    const { stdout } = await runCli(
+      ["measure-log", "--update", "fwd-test", "--status", "monitoring", "--format", "json"],
+      { cwd: measureDir },
+    );
+    const entry = JSON.parse(stdout) as { status: string };
+    expect(entry.status).toBe("monitoring");
   });
 });
 
