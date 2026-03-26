@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import { Command } from "commander";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadCampaignLayerPolicy } from "./config/campaign-layer-policy.js";
 import { loadOptimisationConfig } from "./config/optimisation-config.js";
 import { Logger } from "./utils/logger.js";
@@ -125,12 +126,17 @@ const writeTextFile = async (filePath: string, content: string): Promise<void> =
   await writeFile(resolved, content, "utf8");
 };
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(
+  await readFile(path.resolve(__dirname, "../package.json"), "utf8"),
+);
+
 const program = new Command();
 
 program
   .name("aads")
   .description("CLI tool for analyzing Amazon Ads Sponsored Products campaign performance")
-  .version("1.2.0");
+  .version(pkg.version);
 
 program
   .command("analyze")
